@@ -7,15 +7,16 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useResume } from "@/context/ResumeContext";
 import { Bot, CaseSensitive, Contact, GraduationCap, Hand, Home, Pencil, PlusCircle, Trash2, Trophy } from "lucide-react";
+import { Card } from "../ui/card";
 
 export function ResumeForm() {
     const { resumeData, setResumeData } = useResume();
 
-    const handleChange = (section: string, field: string, value: string) => {
+    const handleChange = (section: 'personal', field: string, value: string) => {
         setResumeData(prev => ({
             ...prev,
             [section]: {
-                ...prev[section as keyof typeof prev],
+                ...prev[section],
                 [field]: value,
             }
         }));
@@ -25,10 +26,21 @@ export function ResumeForm() {
         setResumeData(prev => ({ ...prev, summary: value }));
     };
     
+    const handleSkillsChange = (value: string) => {
+        setResumeData(prev => ({
+            ...prev,
+            skills: {
+                ...prev.skills,
+                technical: value.split(',').map(s => s.trim()),
+            }
+        }));
+    }
+
     const handleListItemChange = (section: 'work' | 'education' | 'projects', index: number, field: string, value: string) => {
         setResumeData(prev => {
             const list = [...prev[section]];
-            (list[index] as any)[field] = value;
+            const updatedItem = { ...list[index], [field]: value };
+            list[index] = updatedItem;
             return { ...prev, [section]: list };
         });
     };
@@ -111,6 +123,28 @@ export function ResumeForm() {
                      </AccordionContent>
                 </AccordionItem>
 
+                 {/* Skills */}
+                <AccordionItem value="skills" className="bg-card border-none rounded-lg">
+                    <AccordionTrigger className="p-4 hover:no-underline">
+                        <div className="flex items-center gap-3">
+                            <Trophy className="h-5 w-5" />
+                            <span className="font-semibold">Skills</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 pt-0">
+                        <div className="space-y-4">
+                            <div>
+                                <Label className="text-xs text-muted-foreground">Technical Skills (comma separated)</Label>
+                                <Input 
+                                    placeholder="React, Node.js, Python" 
+                                    value={resumeData.skills.technical.join(', ')} 
+                                    onChange={e => handleSkillsChange(e.target.value)} 
+                                />
+                            </div>
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+
                  {/* Work Experience */}
                 <AccordionItem value="experience" className="bg-card border-none rounded-lg">
                     <AccordionTrigger className="p-4 hover:no-underline">
@@ -179,6 +213,37 @@ export function ResumeForm() {
                             </Button>
                         </div>
                      </AccordionContent>
+                </AccordionItem>
+
+                 {/* Projects */}
+                <AccordionItem value="projects" className="bg-card border-none rounded-lg">
+                    <AccordionTrigger className="p-4 hover:no-underline">
+                        <div className="flex items-center gap-3">
+                            <CaseSensitive className="h-5 w-5" />
+                            <span className="font-semibold">Projects</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 pt-0">
+                       <div className="space-y-4">
+                            {resumeData.projects.map((project, index) => (
+                                <Card key={index} className="p-4 bg-background">
+                                    <div className="flex justify-end">
+                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeListItem('projects', index)}>
+                                            <Trash2 className="h-4 w-4"/>
+                                        </Button>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Input placeholder="Project Name" value={project.name} onChange={e => handleListItemChange('projects', index, 'name', e.target.value)} />
+                                        <Input placeholder="Tech Stack (e.g., React, Node.js)" value={project.techStack} onChange={e => handleListItemChange('projects', index, 'techStack', e.target.value)} />
+                                        <Textarea placeholder="Description..." value={project.description} onChange={e => handleListItemChange('projects', index, 'description', e.target.value)} />
+                                    </div>
+                                </Card>
+                            ))}
+                            <Button variant="outline" className="w-full mt-2" onClick={() => addListItem('projects')}>
+                                <PlusCircle className="mr-2"/> Add Project
+                            </Button>
+                        </div>
+                    </AccordionContent>
                 </AccordionItem>
             </Accordion>
         </div>
