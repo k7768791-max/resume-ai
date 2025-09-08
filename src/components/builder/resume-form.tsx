@@ -5,124 +5,182 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useResume } from "@/context/ResumeContext";
 import { Bot, CaseSensitive, Contact, GraduationCap, Hand, Home, Pencil, PlusCircle, Trash2, Trophy } from "lucide-react";
 
-const formSections = [
-    { 
-        id: 'personal', 
-        title: 'Personal Information', 
-        icon: <Contact className="h-5 w-5" /> ,
-        fields: [
-            { label: 'Full Name', placeholder: 'John Doe' },
-            { label: 'Email', placeholder: 'john.doe@email.com' },
-            { label: 'Phone', placeholder: '123-456-7890' },
-            { label: 'Location', placeholder: 'New York, NY' },
-            { label: 'LinkedIn', placeholder: 'linkedin.com/in/johndoe' },
-            { label: 'GitHub', placeholder: 'github.com/johndoe' },
-        ]
-    },
-    { 
-        id: 'summary', 
-        title: 'Professional Summary', 
-        icon: <Pencil className="h-5 w-5" />,
-        isTextArea: true,
-        aiEnabled: true,
-    },
-    { 
-        id: 'experience', 
-        title: 'Work Experience', 
-        icon: <Home className="h-5 w-5" />,
-        isList: true,
-        items: [
-            { title: 'Senior Developer', subtitle: 'TechCorp | Jan 2022 - Present' }
-        ]
-    },
-    { 
-        id: 'education', 
-        title: 'Education', 
-        icon: <GraduationCap className="h-5 w-5" />,
-        isList: true,
-        items: [
-            { title: 'Computer Science, MIT', subtitle: '2018 - 2022' }
-        ]
-    },
-    { 
-        id: 'skills', 
-        title: 'Skills', 
-        icon: <Trophy className="h-5 w-5" />,
-        isList: true,
-        items: [
-            { title: 'Technical: React, Node.js, Python' },
-            { title: 'Soft: Leadership, Communication' },
-        ]
-    },
-    { 
-        id: 'projects', 
-        title: 'Projects', 
-        icon: <CaseSensitive className="h-5 w-5" />,
-        isList: true,
-        items: [
-            { title: 'E-commerce Platform', subtitle: 'React, Node.js, MongoDB' }
-        ]
-    },
-]
-
 export function ResumeForm() {
+    const { resumeData, setResumeData } = useResume();
+
+    const handleChange = (section: string, field: string, value: string) => {
+        setResumeData(prev => ({
+            ...prev,
+            [section]: {
+                ...prev[section as keyof typeof prev],
+                [field]: value,
+            }
+        }));
+    };
+
+    const handleSummaryChange = (value: string) => {
+        setResumeData(prev => ({ ...prev, summary: value }));
+    };
+    
+    const handleListItemChange = (section: 'work' | 'education' | 'projects', index: number, field: string, value: string) => {
+        setResumeData(prev => {
+            const list = [...prev[section]];
+            (list[index] as any)[field] = value;
+            return { ...prev, [section]: list };
+        });
+    };
+
+    const addListItem = (section: 'work' | 'education' | 'projects') => {
+        const newItem = section === 'work'
+            ? { title: '', company: '', startDate: '', endDate: '', description: '' }
+            : section === 'education'
+            ? { school: '', degree: '', startDate: '', endDate: '', gpa: '' }
+            : { name: '', techStack: '', description: '' };
+        
+        setResumeData(prev => ({
+            ...prev,
+            [section]: [...prev[section], newItem]
+        }));
+    };
+
+     const removeListItem = (section: 'work' | 'education' | 'projects', index: number) => {
+        setResumeData(prev => ({
+            ...prev,
+            [section]: prev[section].filter((_, i) => i !== index)
+        }));
+    };
+
     return (
         <div className="h-full">
             <h2 className="text-xl font-headline font-bold mb-4">Resume Sections</h2>
             <Accordion type="multiple" defaultValue={['personal']} className="w-full space-y-4">
-                {formSections.map(section => (
-                    <AccordionItem value={section.id} key={section.id} className="bg-card border-none rounded-lg">
-                        <AccordionTrigger className="p-4 hover:no-underline">
-                            <div className="flex items-center gap-3">
-                                {section.icon}
-                                <span className="font-semibold">{section.title}</span>
+                {/* Personal Information */}
+                <AccordionItem value="personal" className="bg-card border-none rounded-lg">
+                    <AccordionTrigger className="p-4 hover:no-underline">
+                        <div className="flex items-center gap-3">
+                            <Contact className="h-5 w-5" />
+                            <span className="font-semibold">Personal Information</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 pt-0">
+                         <div className="space-y-4">
+                            <div>
+                                <Label className="text-xs text-muted-foreground">Full Name</Label>
+                                <Input placeholder="John Doe" value={resumeData.personal.fullName} onChange={e => handleChange('personal', 'fullName', e.target.value)} />
                             </div>
-                        </AccordionTrigger>
-                        <AccordionContent className="p-4 pt-0">
-                           {section.fields && (
-                             <div className="space-y-4">
-                                {section.fields.map(field => (
-                                    <div key={field.label}>
-                                        <Label className="text-xs text-muted-foreground">{field.label}</Label>
-                                        <Input placeholder={field.placeholder} />
-                                    </div>
-                                ))}
-                             </div>
-                           )}
-                           {section.isTextArea && (
-                            <div className="relative">
-                                <Textarea placeholder="Experienced software developer with..." rows={5} />
-                                {section.aiEnabled && <Button size="sm" variant="ghost" className="absolute bottom-2 right-2"><Bot className="mr-2 h-4 w-4"/> Generate</Button>}
+                             <div>
+                                <Label className="text-xs text-muted-foreground">Email</Label>
+                                <Input placeholder="john.doe@email.com" value={resumeData.personal.email} onChange={e => handleChange('personal', 'email', e.target.value)} />
                             </div>
-                           )}
-                           {section.isList && (
-                             <div className="space-y-2">
-                                {section.items?.map((item, index) => (
-                                    <div key={index} className="flex items-center justify-between p-2 bg-background rounded-md">
-                                        <div>
-                                            <p className="font-semibold text-sm">{item.title}</p>
-                                            {item.subtitle && <p className="text-xs text-muted-foreground">{item.subtitle}</p>}
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <Button variant="ghost" size="icon" className="h-7 w-7"><Pencil className="h-4 w-4"/></Button>
-                                            <Button variant="ghost" size="icon" className="h-7 w-7"><Trash2 className="h-4 w-4"/></Button>
-                                        </div>
+                             <div>
+                                <Label className="text-xs text-muted-foreground">Phone</Label>
+                                <Input placeholder="123-456-7890" value={resumeData.personal.phone} onChange={e => handleChange('personal', 'phone', e.target.value)} />
+                            </div>
+                            <div>
+                                <Label className="text-xs text-muted-foreground">Location</Label>
+                                <Input placeholder="New York, NY" value={resumeData.personal.location} onChange={e => handleChange('personal', 'location', e.target.value)} />
+                            </div>
+                             <div>
+                                <Label className="text-xs text-muted-foreground">LinkedIn</Label>
+                                <Input placeholder="linkedin.com/in/johndoe" value={resumeData.personal.linkedin} onChange={e => handleChange('personal', 'linkedin', e.target.value)} />
+                            </div>
+                             <div>
+                                <Label className="text-xs text-muted-foreground">GitHub</Label>
+                                <Input placeholder="github.com/johndoe" value={resumeData.personal.github} onChange={e => handleChange('personal', 'github', e.target.value)} />
+                            </div>
+                         </div>
+                    </AccordionContent>
+                </AccordionItem>
+
+                 {/* Professional Summary */}
+                <AccordionItem value="summary" className="bg-card border-none rounded-lg">
+                    <AccordionTrigger className="p-4 hover:no-underline">
+                         <div className="flex items-center gap-3">
+                            <Pencil className="h-5 w-5" />
+                            <span className="font-semibold">Professional Summary</span>
+                        </div>
+                    </AccordionTrigger>
+                     <AccordionContent className="p-4 pt-0">
+                        <div className="relative">
+                            <Textarea placeholder="Experienced software developer with..." rows={5} value={resumeData.summary} onChange={e => handleSummaryChange(e.target.value)}/>
+                            <Button size="sm" variant="ghost" className="absolute bottom-2 right-2"><Bot className="mr-2 h-4 w-4"/> Generate</Button>
+                        </div>
+                     </AccordionContent>
+                </AccordionItem>
+
+                 {/* Work Experience */}
+                <AccordionItem value="experience" className="bg-card border-none rounded-lg">
+                    <AccordionTrigger className="p-4 hover:no-underline">
+                         <div className="flex items-center gap-3">
+                            <Home className="h-5 w-5" />
+                            <span className="font-semibold">Work Experience</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 pt-0">
+                        <div className="space-y-4">
+                            {resumeData.work.map((job, index) => (
+                                <Card key={index} className="p-4 bg-background">
+                                    <div className="flex justify-end">
+                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeListItem('work', index)}>
+                                            <Trash2 className="h-4 w-4"/>
+                                        </Button>
                                     </div>
-                                ))}
-                                <Button variant="outline" className="w-full mt-2">
-                                    <PlusCircle className="mr-2"/> Add {section.title.slice(0,-1)}
-                                </Button>
-                             </div>
-                           )}
-                        </AccordionContent>
-                    </AccordionItem>
-                ))}
+                                    <div className="space-y-2">
+                                        <Input placeholder="Job Title" value={job.title} onChange={e => handleListItemChange('work', index, 'title', e.target.value)} />
+                                        <Input placeholder="Company" value={job.company} onChange={e => handleListItemChange('work', index, 'company', e.target.value)} />
+                                        <div className="flex gap-2">
+                                            <Input placeholder="Start Date" value={job.startDate} onChange={e => handleListItemChange('work', index, 'startDate', e.target.value)} />
+                                            <Input placeholder="End Date" value={job.endDate} onChange={e => handleListItemChange('work', index, 'endDate', e.target.value)} />
+                                        </div>
+                                        <Textarea placeholder="Description..." value={job.description} onChange={e => handleListItemChange('work', index, 'description', e.target.value)} />
+                                    </div>
+                                </Card>
+                            ))}
+                            <Button variant="outline" className="w-full mt-2" onClick={() => addListItem('work')}>
+                                <PlusCircle className="mr-2"/> Add Experience
+                            </Button>
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+                
+                 {/* Education */}
+                <AccordionItem value="education" className="bg-card border-none rounded-lg">
+                    <AccordionTrigger className="p-4 hover:no-underline">
+                         <div className="flex items-center gap-3">
+                            <GraduationCap className="h-5 w-5" />
+                            <span className="font-semibold">Education</span>
+                        </div>
+                    </AccordionTrigger>
+                     <AccordionContent className="p-4 pt-0">
+                       <div className="space-y-4">
+                            {resumeData.education.map((edu, index) => (
+                                <Card key={index} className="p-4 bg-background">
+                                    <div className="flex justify-end">
+                                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeListItem('education', index)}>
+                                            <Trash2 className="h-4 w-4"/>
+                                        </Button>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Input placeholder="School" value={edu.school} onChange={e => handleListItemChange('education', index, 'school', e.target.value)} />
+                                        <Input placeholder="Degree" value={edu.degree} onChange={e => handleListItemChange('education', index, 'degree', e.target.value)} />
+                                        <div className="flex gap-2">
+                                            <Input placeholder="Start Date" value={edu.startDate} onChange={e => handleListItemChange('education', index, 'startDate', e.target.value)} />
+                                            <Input placeholder="End Date" value={edu.endDate} onChange={e => handleListItemChange('education', index, 'endDate', e.target.value)} />
+                                        </div>
+                                         <Input placeholder="GPA" value={edu.gpa} onChange={e => handleListItemChange('education', index, 'gpa', e.target.value)} />
+                                    </div>
+                                </Card>
+                            ))}
+                            <Button variant="outline" className="w-full mt-2" onClick={() => addListItem('education')}>
+                                <PlusCircle className="mr-2"/> Add Education
+                            </Button>
+                        </div>
+                     </AccordionContent>
+                </AccordionItem>
             </Accordion>
-             <Button variant="ghost" className="w-full mt-4">
-                <PlusCircle className="mr-2"/> Add Custom Section
-            </Button>
         </div>
     )
 }
