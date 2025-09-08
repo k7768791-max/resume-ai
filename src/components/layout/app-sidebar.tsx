@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, FileText, Home, LayoutTemplate, Linkedin, Settings, Target, TrendingUp } from "lucide-react";
+import { Bot, FileText, Home, LayoutTemplate, Linkedin, Settings, Target, TrendingUp, User } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
 import { Logo } from "@/components/icons";
 import { cn } from "@/lib/utils";
@@ -19,6 +19,7 @@ const navLinks = [
 ];
 
 const bottomLinks = [
+    { href: '/profile', label: 'Profile', icon: <User /> },
     { href: '/profile', label: 'Settings', icon: <Settings /> },
 ]
 
@@ -39,7 +40,7 @@ export function AppSidebar() {
                         <SidebarMenuItem key={link.href}>
                             <Link href={link.href}>
                                 <SidebarMenuButton 
-                                    isActive={pathname.startsWith(link.href) && link.href !== '/dashboard' || pathname === '/dashboard'}
+                                    isActive={pathname.startsWith(link.href) && link.href !== '/dashboard' || pathname === '/dashboard' && link.href === '/dashboard'}
                                     tooltip={{
                                         children: link.label
                                     }}
@@ -54,7 +55,7 @@ export function AppSidebar() {
                 
                 <SidebarMenu>
                     {bottomLinks.map(link => (
-                        <SidebarMenuItem key={link.href}>
+                        <SidebarMenuItem key={link.label}>
                              <Link href={link.href}>
                                 <SidebarMenuButton 
                                     isActive={pathname.startsWith(link.href)}
