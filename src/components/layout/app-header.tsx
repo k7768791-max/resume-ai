@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { LifeBuoy, LogOut, Settings, User, Menu, Bot, FileText, Home, LayoutTemplate, Linkedin, Target, TrendingUp } from "lucide-react";
@@ -66,6 +66,9 @@ export function AppHeader() {
                             </Button>
                         </SheetTrigger>
                         <SheetContent side="left">
+                            <SheetHeader className="sr-only">
+                                <SheetTitle>Navigation Menu</SheetTitle>
+                            </SheetHeader>
                             <div className="flex flex-col h-full">
                                 <div className="flex items-center mb-6">
                                     <Link href="/dashboard" className="mr-6 flex items-center gap-2">
