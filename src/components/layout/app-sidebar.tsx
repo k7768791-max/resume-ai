@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, FileText, Home, Linkedin, Settings, Target, TrendingUp } from "lucide-react";
+import { Bot, FileText, Home, LayoutTemplate, Linkedin, Settings, Target, TrendingUp } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
 import { Logo } from "@/components/icons";
 import { cn } from "@/lib/utils";
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 const navLinks = [
     { href: '/dashboard', label: 'Dashboard', icon: <Home /> },
     { href: '/builder/1', label: 'Resume Builder', icon: <FileText /> },
+    { href: '/templates', label: 'Templates', icon: <LayoutTemplate /> },
     { href: '/ats-analyzer', label: 'ATS Analyzer', icon: <Bot /> },
     { href: '/tailor', label: 'Resume Tailoring', icon: <Target /> },
     { href: '/job-matcher', label: 'Job Matcher', icon: <TrendingUp /> },
@@ -38,7 +39,7 @@ export function AppSidebar() {
                         <SidebarMenuItem key={link.href}>
                             <Link href={link.href}>
                                 <SidebarMenuButton 
-                                    isActive={pathname.startsWith(link.href)}
+                                    isActive={pathname.startsWith(link.href) && link.href !== '/dashboard' || pathname === '/dashboard'}
                                     tooltip={{
                                         children: link.label
                                     }}
