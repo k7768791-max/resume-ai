@@ -1,15 +1,20 @@
-// This is a placeholder for the authenticated app layout.
-// The user request is very large, and this will be implemented in a future step.
+
+import { AppHeader } from "@/components/layout/app-header";
+import { AppSidebar } from "@/components/layout/app-sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 export default function AppLayout({
     children,
-  }: {
+}: {
     children: React.ReactNode;
-  }) {
+}) {
     return (
-      <div className="min-h-screen bg-background">
-        {/* Placeholder for sidebar and header */}
-        <main>{children}</main>
-      </div>
+        <SidebarProvider>
+            <AppSidebar />
+            <div className="flex flex-col flex-1">
+                <AppHeader />
+                <main className="flex-1 bg-muted/40">{children}</main>
+            </div>
+        </SidebarProvider>
     );
-  }
+}
