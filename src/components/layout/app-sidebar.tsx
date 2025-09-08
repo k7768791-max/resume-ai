@@ -2,11 +2,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Bot, FileText, Home, LayoutTemplate, Linkedin, Settings, Target, TrendingUp, User } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Bot, FileText, Home, LayoutTemplate, Linkedin, LogOut, Settings, Target, TrendingUp, User } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
 import { Logo } from "@/components/icons";
-import { cn } from "@/lib/utils";
+import { signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+import { useToast } from "@/hooks/use-toast";
 
 const navLinks = [
     { href: '/dashboard', label: 'Dashboard', icon: <Home /> },
@@ -25,6 +27,25 @@ const bottomLinks = [
 
 export function AppSidebar() {
     const pathname = usePathname();
+    const router = useRouter();
+    const { toast } = useToast();
+
+    const handleSignOut = async () => {
+        try {
+            await signOut(auth);
+            toast({
+              title: "Signed Out",
+              description: "You have been successfully signed out.",
+            });
+            router.push('/auth/login');
+        } catch (error) {
+            toast({
+                variant: "destructive",
+                title: "Sign Out Failed",
+                description: "An error occurred while signing out. Please try again.",
+            });
+        }
+    };
 
     return (
         <Sidebar variant="sidebar" collapsible="icon" className="hidden md:block border-r">
@@ -69,6 +90,17 @@ export function AppSidebar() {
                             </Link>
                         </SidebarMenuItem>
                     ))}
+                     <SidebarMenuItem>
+                        <SidebarMenuButton
+                            onClick={handleSignOut}
+                            tooltip={{
+                                children: "Logout"
+                            }}
+                        >
+                            <LogOut />
+                            <span className="group-data-[collapsible=icon]:hidden">Logout</span>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
                 </SidebarMenu>
 
             </SidebarContent>
