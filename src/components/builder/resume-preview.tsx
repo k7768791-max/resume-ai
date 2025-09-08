@@ -1,34 +1,45 @@
-import { Button } from "@/components/ui/button";
+
+'use client';
+
 import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Laptop, Printer, Smartphone } from "lucide-react";
-import Image from "next/image";
+import { useResume } from "@/context/ResumeContext";
+import { Template1_Basic } from '../templates/Template1_Basic';
+import { Template2_Modern } from '../templates/Template2_Modern';
+import { Template3_Elegant } from '../templates/Template3_Elegant';
+import { Template4_Corporate } from '../templates/Template4_Corporate';
+import { Template5_Compact } from '../templates/Template5_Compact';
+import { Template6_Clean } from '../templates/Template6_Clean';
+import { Template7_BoldHeader } from '../templates/Template7_BoldHeader';
+import { Template8_Timeline } from '../templates/Template8_Timeline';
+import { Template9_Academic } from '../templates/Template9_Academic';
+import { Template10_Simple } from '../templates/Template10_Simple';
+
+const templates: { [key: string]: React.FC<any> } = {
+    Template1_Basic,
+    Template2_Modern,
+    Template3_Elegant,
+    Template4_Corporate,
+    Template5_Compact,
+    Template6_Clean,
+    Template7_BoldHeader,
+    Template8_Timeline,
+    Template9_Academic,
+    Template10_Simple,
+};
 
 export function ResumePreview() {
+    const { resumeData, selectedTemplate } = useResume();
+    const SelectedTemplateComponent = templates[selectedTemplate];
+
     return (
         <div className="h-full flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-                <Select defaultValue="modern">
-                    <SelectTrigger className="w-[200px]">
-                        <SelectValue placeholder="Select Template" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="modern">Modern Professional</SelectItem>
-                        <SelectItem value="classic">Classic</SelectItem>
-                        <SelectItem value="creative">Creative</SelectItem>
-                    </SelectContent>
-                </Select>
-                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="icon"><Smartphone /></Button>
-                    <Button variant="outline" size="icon"><Laptop /></Button>
-                    <Button variant="outline" size="icon"><Printer /></Button>
-                </div>
-            </div>
-            <Card className="flex-1 overflow-auto">
-                <CardContent className="p-4 md:p-8">
-                     <Image src="https://picsum.photos/800/1120" width={800} height={1120} alt="Resume Preview" className="rounded-md shadow-lg" data-ai-hint="resume document" />
+            <Card className="flex-1 overflow-auto shadow-lg">
+                <CardContent className="p-0">
+                    <div className="bg-white" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
+                         {SelectedTemplateComponent && <SelectedTemplateComponent data={resumeData} />}
+                    </div>
                 </CardContent>
             </Card>
         </div>
-    )
+    );
 }
