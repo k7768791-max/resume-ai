@@ -3,7 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bot, FileText, Home, Linkedin, Settings, TrendingUp } from "lucide-react";
+import { Bot, FileText, Home, Linkedin, Settings, Target, TrendingUp } from "lucide-react";
 import { Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
 import { Logo } from "@/components/icons";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ const navLinks = [
     { href: '/dashboard', label: 'Dashboard', icon: <Home /> },
     { href: '/builder/1', label: 'Resume Builder', icon: <FileText /> },
     { href: '/ats-analyzer', label: 'ATS Analyzer', icon: <Bot /> },
+    { href: '/tailor', label: 'Resume Tailoring', icon: <Target /> },
     { href: '/job-matcher', label: 'Job Matcher', icon: <TrendingUp /> },
     { href: '/linkedin-optimizer', label: 'LinkedIn Optimizer', icon: <Linkedin /> },
 ];
@@ -72,4 +73,3 @@ export function AppSidebar() {
         </Sidebar>
     );
 }
-
