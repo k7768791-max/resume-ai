@@ -10,10 +10,9 @@ export default function AppLayout({
 }) {
     return (
         <SidebarProvider>
-            <AppSidebar />
-            <div className="flex flex-col flex-1">
-                <AppHeader />
-                <main className="flex-1 bg-muted/40">{children}</main>
+            <div className="flex h-screen bg-background">
+                <AppSidebar />
+                <main className="flex-1 flex flex-col overflow-y-auto">{children}</main>
             </div>
         </SidebarProvider>
     );
