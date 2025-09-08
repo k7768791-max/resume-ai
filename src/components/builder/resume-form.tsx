@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useResume } from "@/context/ResumeContext";
-import { Bot, CaseSensitive, Contact, GraduationCap, Hand, Home, Pencil, PlusCircle, Trash2, Trophy } from "lucide-react";
+import { Bot, CaseSensitive, Contact, GraduationCap, Hand, Home, Pencil, PlusCircle, Trash2, Trophy, Award, Heart, Sparkles } from "lucide-react";
 import { Card } from "../ui/card";
 
 export function ResumeForm() {
@@ -35,6 +35,47 @@ export function ResumeForm() {
             }
         }));
     }
+
+    const handleArrayChange = (section: 'certifications', index: number, value: string) => {
+        setResumeData(prev => {
+            const list = [...(prev[section] || [])];
+            list[index] = value;
+            return { ...prev, [section]: list };
+        });
+    };
+    
+    const handleExtrasChange = (field: 'awards' | 'interests', index: number, value: string) => {
+         setResumeData(prev => ({
+            ...prev,
+            extras: {
+                ...prev.extras,
+                [field]: prev.extras?.[field]?.map((item, i) => i === index ? value : item) ?? [value]
+            }
+        }));
+    };
+    
+    const addToArray = (section: 'certifications') => {
+        setResumeData(prev => ({ ...prev, [section]: [...(prev[section] || []), ''] }));
+    };
+
+    const removeFromArray = (section: 'certifications', index: number) => {
+        setResumeData(prev => ({ ...prev, [section]: prev[section]?.filter((_, i) => i !== index) }));
+    };
+
+    const addToExtras = (field: 'awards' | 'interests') => {
+        setResumeData(prev => ({
+            ...prev,
+            extras: { ...prev.extras, [field]: [...(prev.extras?.[field] || []), ''] }
+        }));
+    };
+    
+    const removeFromExtras = (field: 'awards' | 'interests', index: number) => {
+         setResumeData(prev => ({
+            ...prev,
+            extras: { ...prev.extras, [field]: prev.extras?.[field]?.filter((_, i) => i !== index) }
+        }));
+    };
+
 
     const handleListItemChange = (section: 'work' | 'education' | 'projects', index: number, field: string, value: string) => {
         setResumeData(prev => {
@@ -245,6 +286,70 @@ export function ResumeForm() {
                         </div>
                     </AccordionContent>
                 </AccordionItem>
+
+                 {/* Certifications */}
+                <AccordionItem value="certifications" className="bg-card border-none rounded-lg">
+                    <AccordionTrigger className="p-4 hover:no-underline">
+                        <div className="flex items-center gap-3">
+                            <Award className="h-5 w-5" />
+                            <span className="font-semibold">Certifications</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 pt-0">
+                       <div className="space-y-4">
+                            {(resumeData.certifications || []).map((cert, index) => (
+                                <Card key={index} className="p-4 bg-background flex items-center gap-2">
+                                    <Input placeholder="AWS Certified Developer" value={cert} onChange={e => handleArrayChange('certifications', index, e.target.value)} />
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => removeFromArray('certifications', index)}>
+                                        <Trash2 className="h-4 w-4"/>
+                                    </Button>
+                                </Card>
+                            ))}
+                            <Button variant="outline" className="w-full mt-2" onClick={() => addToArray('certifications')}>
+                                <PlusCircle className="mr-2"/> Add Certification
+                            </Button>
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+
+                 {/* Interests */}
+                <AccordionItem value="interests" className="bg-card border-none rounded-lg">
+                    <AccordionTrigger className="p-4 hover:no-underline">
+                        <div className="flex items-center gap-3">
+                            <Heart className="h-5 w-5" />
+                            <span className="font-semibold">Hobbies & Interests</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 pt-0">
+                       <div className="space-y-4">
+                            {(resumeData.extras?.interests || []).map((interest, index) => (
+                                <Card key={index} className="p-4 bg-background flex items-center gap-2">
+                                    <Input placeholder="Open Source Contribution" value={interest} onChange={e => handleExtrasChange('interests', index, e.target.value)} />
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => removeFromExtras('interests', index)}>
+                                        <Trash2 className="h-4 w-4"/>
+                                    </Button>
+                                </Card>
+                            ))}
+                            <Button variant="outline" className="w-full mt-2" onClick={() => addToExtras('interests')}>
+                                <PlusCircle className="mr-2"/> Add Interest
+                            </Button>
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+
+                 {/* Custom Section */}
+                 <AccordionItem value="custom" className="bg-card border-none rounded-lg">
+                    <AccordionTrigger className="p-4 hover:no-underline">
+                        <div className="flex items-center gap-3">
+                            <Sparkles className="h-5 w-5" />
+                            <span className="font-semibold">Custom Section</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 pt-0">
+                       <p className="text-sm text-muted-foreground text-center p-4">Custom section functionality coming soon!</p>
+                    </AccordionContent>
+                </AccordionItem>
+
             </Accordion>
         </div>
     )
