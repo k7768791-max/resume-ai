@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BadgeYen, BarChart, BookUser, ChevronRight, CreditCard, Download, Edit, File, FileClock, History, Settings, Shield, Star, Trophy, UserCog } from "lucide-react";
+import { CircleDollarSign, BarChart, BookUser, ChevronRight, CreditCard, Download, Edit, File, FileClock, History, Settings, Shield, Star, Trophy, UserCog } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
 
 const usageStats = [
@@ -32,7 +32,7 @@ const successMetrics = [
     { name: 'Score Improvement', value: '+23%', icon: <BarChart className="text-primary"/> },
     { name: 'Jobs Applied To', value: '12', icon: <FileClock className="text-primary"/> },
     { name: 'Interview Callbacks', value: '4 (33%)', icon: <Star className="text-primary"/> },
-    { name: 'Job Offers', value: '1', icon: <BadgeYen className="text-primary"/> },
+    { name: 'Job Offers', value: '1', icon: <CircleDollarSign className="text-primary"/> },
 ];
 
 const chartData = [
@@ -266,3 +266,5 @@ export default function ProfilePage() {
         </div>
     );
 }
+
+    
