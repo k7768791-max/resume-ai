@@ -7,6 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { useState } from 'react';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
     return (
@@ -20,55 +29,116 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
     );
   }
 
+const formSchema = z.object({
+    email: z.string().email({ message: "Invalid email address." }),
+    password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+});
+
 export function LoginForm() {
+    const router = useRouter();
+    const { toast } = useToast();
+    const [isLoading, setIsLoading] = useState(false);
+
+    const form = useForm<z.infer<typeof formSchema>>({
+        resolver: zodResolver(formSchema),
+        defaultValues: {
+          email: "",
+          password: "",
+        },
+    });
+
+    async function onSubmit(values: z.infer<typeof formSchema>) {
+        setIsLoading(true);
+        try {
+            await signInWithEmailAndPassword(auth, values.email, values.password);
+            toast({
+              title: "Success!",
+              description: "You've been logged in successfully.",
+            });
+            router.push('/dashboard');
+        } catch (error: any) {
+            toast({
+                variant: "destructive",
+                title: "Login Failed",
+                description: error.message,
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    }
+
   return (
     <Card className="w-full max-w-md">
       <CardHeader className="text-center">
         <CardTitle className="text-2xl font-headline">Welcome Back</CardTitle>
         <CardDescription>Sign in to your ResumeAI account</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email Address</Label>
-          <Input id="email" type="email" placeholder="you@example.com" required />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" required />
-        </div>
-        <div className="flex items-center justify-between">
-            <div className='flex items-center space-x-2'>
-                <Checkbox id="remember-me" />
-                <Label htmlFor="remember-me" className="text-sm font-normal">Remember me</Label>
-            </div>
-            <Link href="#" className="text-sm text-primary hover:underline">
-                Forgot password?
-            </Link>
-        </div>
-      </CardContent>
-      <CardFooter className="flex-col gap-4">
-        <Button className="w-full">Sign In with Email</Button>
-        <div className="relative w-full">
-            <Separator />
-            <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-sm text-muted-foreground">or</span>
-        </div>
-        <div className='w-full grid grid-cols-1 sm:grid-cols-2 gap-2'>
-            <Button variant="outline" className="w-full">
-                <GoogleIcon className="mr-2 h-5 w-5" />
-                Continue with Google
-            </Button>
-            <Button variant="outline" className="w-full">
-                <LinkedInIcon className="mr-2 h-5 w-5" />
-                Continue with LinkedIn
-            </Button>
-        </div>
-        <p className="text-center text-sm text-muted-foreground">
-          Don't have an account?{' '}
-          <Link href="/auth/signup" className="text-primary hover:underline">
-            Sign up here
-          </Link>
-        </p>
-      </CardFooter>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+            <CardContent className="space-y-4">
+                <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Email Address</FormLabel>
+                        <FormControl>
+                            <Input placeholder="you@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <FormField
+                    control={form.control}
+                    name="password"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Password</FormLabel>
+                        <FormControl>
+                            <Input type="password" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                <div className="flex items-center justify-between">
+                    <div className='flex items-center space-x-2'>
+                        <Checkbox id="remember-me" />
+                        <Label htmlFor="remember-me" className="text-sm font-normal">Remember me</Label>
+                    </div>
+                    <Link href="#" className="text-sm text-primary hover:underline">
+                        Forgot password?
+                    </Link>
+                </div>
+            </CardContent>
+            <CardFooter className="flex-col gap-4">
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading ? "Signing In..." : "Sign In with Email"}
+                </Button>
+                <div className="relative w-full">
+                    <Separator />
+                    <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-sm text-muted-foreground">or</span>
+                </div>
+                <div className='w-full grid grid-cols-1 sm:grid-cols-2 gap-2'>
+                    <Button variant="outline" className="w-full" type="button">
+                        <GoogleIcon className="mr-2 h-5 w-5" />
+                        Continue with Google
+                    </Button>
+                    <Button variant="outline" className="w-full" type="button">
+                        <LinkedInIcon className="mr-2 h-5 w-5" />
+                        Continue with LinkedIn
+                    </Button>
+                </div>
+                <p className="text-center text-sm text-muted-foreground">
+                Don't have an account?{' '}
+                <Link href="/auth/signup" className="text-primary hover:underline">
+                    Sign up here
+                </Link>
+                </p>
+            </CardFooter>
+        </form>
+      </Form>
     </Card>
   );
 }
