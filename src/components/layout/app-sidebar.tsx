@@ -50,10 +50,7 @@ export function AppSidebar() {
     return (
         <Sidebar variant="sidebar" collapsible="icon" className="hidden sm:block border-r w-64 data-[collapsible=icon]:w-14 transition-all duration-300 ease-in-out">
             <SidebarHeader>
-                <Link href="/dashboard" className="flex items-center gap-2">
-                    <Logo className="h-7 w-7 text-primary" />
-                    <span className="font-bold font-headline text-xl group-data-[collapsible=icon]:hidden">ResumeAI</span>
-                </Link>
+                
             </SidebarHeader>
             <SidebarContent className="flex flex-col justify-between p-2">
                 <SidebarMenu>
