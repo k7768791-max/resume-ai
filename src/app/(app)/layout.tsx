@@ -1,7 +1,7 @@
 
 import { AppHeader } from "@/components/layout/app-header";
 import { AppSidebar } from "@/components/layout/app-sidebar";
-import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 export default function AppLayout({
     children,
@@ -10,14 +10,14 @@ export default function AppLayout({
 }) {
     return (
         <SidebarProvider>
-            <AppSidebar />
-            <div className="flex flex-col h-screen bg-background">
-                <AppHeader />
-                <main className="flex-1 overflow-y-auto">
-                    <SidebarInset>
+            <div className="flex min-h-screen w-full bg-muted/40">
+                <AppSidebar />
+                <div className="flex flex-col w-full">
+                    <AppHeader />
+                    <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
                         {children}
-                    </SidebarInset>
-                </main>
+                    </main>
+                </div>
             </div>
         </SidebarProvider>
     );
