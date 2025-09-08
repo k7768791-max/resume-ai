@@ -9,6 +9,7 @@ import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
 import { LifeBuoy, LogOut, Settings, User } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export function AppHeader() {
     const router = useRouter();
@@ -38,13 +39,17 @@ export function AppHeader() {
                 <DropdownMenuContent align="end">
                     <DropdownMenuLabel>My Account</DropdownMenuLabel>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem>
-                        <User className="mr-2 h-4 w-4" />
-                        Profile
+                    <DropdownMenuItem asChild>
+                        <Link href="/profile">
+                            <User className="mr-2 h-4 w-4" />
+                            Profile
+                        </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem>
-                        <Settings className="mr-2 h-4 w-4" />
-                        Settings
+                    <DropdownMenuItem asChild>
+                         <Link href="/profile">
+                            <Settings className="mr-2 h-4 w-4" />
+                            Settings
+                        </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem>
                         <LifeBuoy className="mr-2 h-4 w-4" />

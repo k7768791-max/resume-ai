@@ -12,7 +12,10 @@ export default function AppLayout({
         <SidebarProvider>
             <div className="flex h-screen bg-background">
                 <AppSidebar />
-                <main className="flex-1 flex flex-col overflow-y-auto">{children}</main>
+                <main className="flex-1 flex flex-col overflow-y-auto">
+                    <AppHeader />
+                    {children}
+                </main>
             </div>
         </SidebarProvider>
     );
