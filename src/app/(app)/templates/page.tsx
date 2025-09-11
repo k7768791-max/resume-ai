@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -52,6 +52,74 @@ const templates = [
 
 const categories = ['All', 'Professional', 'Creative', 'Academic', 'Technical', 'Modern'];
 const prices = ['All', 'Free', 'Premium'];
+
+function TemplatePreviewCard({ template, resumeData, onSelectTemplate }: { template: typeof templates[0], resumeData: any, onSelectTemplate: (template: string) => void }) {
+    const TemplateComponent = templateComponents[template.component];
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [scale, setScale] = useState(0.25);
+
+    useEffect(() => {
+        if (containerRef.current) {
+            const containerWidth = containerRef.current.offsetWidth;
+            const resumeWidth = 210 * 3.77; // A4 width in mm to px approx
+            setScale(containerWidth / resumeWidth);
+        }
+    }, [containerRef]);
+
+    return (
+        <Card className="group overflow-hidden">
+            <CardHeader className="p-0 relative">
+                 <div ref={containerRef} className="aspect-[3/4] bg-muted flex items-center justify-center overflow-hidden">
+                   <div className="w-[210mm] h-[297mm] transform origin-top-left bg-white" style={{ transform: `scale(${scale})` }}>
+                        <TemplateComponent data={resumeData} />
+                    </div>
+                </div>
+                <div className="absolute top-2 right-2 flex flex-col gap-2">
+                    {template.isPremium && <Badge variant="destructive">Premium</Badge>}
+                </div>
+            </CardHeader>
+            <CardContent className="p-4">
+                <CardTitle className="text-base truncate">{template.name}</CardTitle>
+                <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
+                    <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                    <span>{template.rating}</span>
+                    <span>({template.reviews})</span>
+                </div>
+            </CardContent>
+            <CardFooter className="p-2 pt-0 grid grid-cols-2 gap-2">
+                 <Dialog>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" size="sm"><Eye className="mr-2"/> Preview</Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-4xl">
+                        <DialogHeader>
+                            <DialogTitle>{template.name}</DialogTitle>
+                            <DialogDescription>
+                                A detailed preview of the {template.name} template with your content.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                            <div className="bg-muted rounded-md p-4 max-h-[70vh] overflow-auto">
+                                 <div className="bg-white shadow-lg" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
+                                    <TemplateComponent data={resumeData} />
+                                 </div>
+                            </div>
+                            <div>
+                                <h3 className="font-semibold text-lg mb-4">Template Details</h3>
+                                <p><span className="font-medium">Category:</span> {template.category}</p>
+                                <p><span className="font-medium">ATS-Friendly:</span> ✅ Yes</p>
+                                 <p className="flex items-center gap-1"><span className="font-medium">Rating:</span> <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" /> {template.rating} ({template.reviews} reviews)</p>
+                                 <Button className="mt-6 w-full" onClick={() => onSelectTemplate(template.component)}>Use This Template</Button>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
+                <Button size="sm" onClick={() => onSelectTemplate(template.component)}>Select</Button>
+            </CardFooter>
+        </Card>
+    );
+}
+
 
 function TemplatesPageContent() {
     const { resumeData, setSelectedTemplate } = useResume();
@@ -108,61 +176,14 @@ function TemplatesPageContent() {
             </div>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {filteredTemplates.map((template) => {
-                    const TemplateComponent = templateComponents[template.component];
-                    return (
-                    <Card key={template.id} className="group overflow-hidden">
-                        <CardHeader className="p-0 relative">
-                             <div className="aspect-[3/4] bg-muted flex items-center justify-center overflow-hidden">
-                               <div className="w-[210mm] h-[297mm] transform origin-top-left bg-white" style={{ transform: 'scale(0.25)' }}>
-                                    <TemplateComponent data={resumeData} />
-                                </div>
-                            </div>
-                            <div className="absolute top-2 right-2 flex flex-col gap-2">
-                                {template.isPremium && <Badge variant="destructive">Premium</Badge>}
-                            </div>
-                        </CardHeader>
-                        <CardContent className="p-4">
-                            <CardTitle className="text-base truncate">{template.name}</CardTitle>
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground mt-1">
-                                <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                                <span>{template.rating}</span>
-                                <span>({template.reviews})</span>
-                            </div>
-                        </CardContent>
-                        <CardFooter className="p-2 pt-0 grid grid-cols-2 gap-2">
-                             <Dialog>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm"><Eye className="mr-2"/> Preview</Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-4xl">
-                                    <DialogHeader>
-                                        <DialogTitle>{template.name}</DialogTitle>
-                                        <DialogDescription>
-                                            A detailed preview of the {template.name} template with your content.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                                        <div className="bg-muted rounded-md p-4 max-h-[70vh] overflow-auto">
-                                             <div className="bg-white shadow-lg" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
-                                                <TemplateComponent data={resumeData} />
-                                             </div>
-                                        </div>
-                                        <div>
-                                            <h3 className="font-semibold text-lg mb-4">Template Details</h3>
-                                            <p><span className="font-medium">Category:</span> {template.category}</p>
-                                            <p><span className="font-medium">ATS-Friendly:</span> ✅ Yes</p>
-                                             <p className="flex items-center gap-1"><span className="font-medium">Rating:</span> <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" /> {template.rating} ({template.reviews} reviews)</p>
-                                             <Button className="mt-6 w-full" onClick={() => setSelectedTemplate(template.component)}>Use This Template</Button>
-                                        </div>
-                                    </div>
-                                </DialogContent>
-                            </Dialog>
-                            <Button size="sm" onClick={() => setSelectedTemplate(template.component)}>Select</Button>
-                        </CardFooter>
-                    </Card>
-                );
-                })}
+                {filteredTemplates.map((template) => (
+                    <TemplatePreviewCard
+                        key={template.id}
+                        template={template}
+                        resumeData={resumeData}
+                        onSelectTemplate={setSelectedTemplate}
+                    />
+                ))}
             </div>
         </div>
     );
