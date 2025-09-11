@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { analyzeJobMatch, AnalyzeJobMatchOutput } from '@/ai/flows/analyze-job-match';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
+import { db } from '@/lib/firebase-db';
 import { collection, getDocs } from 'firebase/firestore';
 import type { ResumeData } from '@/types/resume';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -251,3 +252,5 @@ export default function JobMatcherPage() {
         </div>
     );
 }
+
+    
