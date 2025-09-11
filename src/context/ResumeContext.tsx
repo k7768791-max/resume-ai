@@ -1,8 +1,11 @@
 
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import { ResumeData } from '@/types/resume';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 const initialData: ResumeData = {
     personal: {
@@ -65,12 +68,25 @@ const initialData: ResumeData = {
     }
 };
 
+const newResumeData: ResumeData = {
+    personal: { fullName: '', email: '', phone: '', location: '', linkedin: '', github: '' },
+    summary: '',
+    skills: { technical: [], soft: [] },
+    work: [],
+    projects: [],
+    education: [],
+    certifications: [],
+    extras: { languages: [], interests: [], awards: [] }
+};
+
 
 interface ResumeContextType {
   resumeData: ResumeData;
   setResumeData: React.Dispatch<React.SetStateAction<ResumeData>>;
   selectedTemplate: string;
   setSelectedTemplate: React.Dispatch<React.SetStateAction<string>>;
+  loadResume: (id: string) => void;
+  isLoading: boolean;
 }
 
 const ResumeContext = createContext<ResumeContextType | undefined>(undefined);
@@ -78,9 +94,43 @@ const ResumeContext = createContext<ResumeContextType | undefined>(undefined);
 export const ResumeProvider = ({ children }: { children: ReactNode }) => {
   const [resumeData, setResumeData] = useState<ResumeData>(initialData);
   const [selectedTemplate, setSelectedTemplate] = useState('Template1_Basic');
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const loadResume = useCallback(async (id: string) => {
+    if (id === 'new') {
+        setResumeData(newResumeData);
+        return;
+    }
+
+    const user = auth.currentUser;
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Error', description: 'You must be logged in to load a resume.' });
+        return;
+    }
+    
+    setIsLoading(true);
+    try {
+        const resumeRef = doc(db, `users/${user.uid}/resumes`, id);
+        const docSnap = await getDoc(resumeRef);
+
+        if (docSnap.exists()) {
+            setResumeData(docSnap.data() as ResumeData);
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: 'Resume not found.' });
+            setResumeData(newResumeData); // Reset to new if not found
+        }
+    } catch (error) {
+        console.error("Error loading resume: ", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to load resume.' });
+    } finally {
+        setIsLoading(false);
+    }
+  }, [toast]);
+
 
   return (
-    <ResumeContext.Provider value={{ resumeData, setResumeData, selectedTemplate, setSelectedTemplate }}>
+    <ResumeContext.Provider value={{ resumeData, setResumeData, selectedTemplate, setSelectedTemplate, loadResume, isLoading }}>
       {children}
     </ResumeContext.Provider>
   );

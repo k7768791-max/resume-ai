@@ -6,5 +6,3 @@ import { app } from "./firebase";
 // but we will keep it for now to avoid breaking other imports
 // and clean it up in a later step.
 export const db = getFirestore(app);
-
-    
