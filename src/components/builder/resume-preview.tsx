@@ -33,9 +33,9 @@ export function ResumePreview() {
 
     return (
         <div className="h-full flex flex-col">
-            <Card className="flex-1 overflow-auto shadow-lg">
+            <Card className="flex-1 overflow-auto">
                 <CardContent className="p-0">
-                    <div className="bg-white" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
+                    <div id="resume-content" className="bg-white shadow-lg" style={{ width: '210mm', minHeight: '297mm', margin: 'auto' }}>
                          {SelectedTemplateComponent && <SelectedTemplateComponent data={resumeData} />}
                     </div>
                 </CardContent>
