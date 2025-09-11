@@ -113,8 +113,8 @@ function TemplatesPageContent() {
                     return (
                     <Card key={template.id} className="group overflow-hidden">
                         <CardHeader className="p-0 relative">
-                            <div className="aspect-[3/4] bg-muted flex items-center justify-center overflow-hidden">
-                               <div className="w-full h-full scale-[0.2] origin-top-left bg-white">
+                             <div className="aspect-[3/4] bg-muted flex items-center justify-center overflow-hidden">
+                               <div className="w-[210mm] h-[297mm] transform origin-top-left bg-white" style={{ transform: 'scale(0.25)' }}>
                                     <TemplateComponent data={resumeData} />
                                 </div>
                             </div>
