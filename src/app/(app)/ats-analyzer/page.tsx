@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { analyzeJobMatch, AnalyzeJobMatchOutput } from "@/ai/flows/analyze-job-match";
 import { extractTextFromFile } from "@/ai/flows/extract-text-from-file";
+import { Label } from "@/components/ui/label";
 
 export default function AtsAnalyzerPage() {
     const [analysisResult, setAnalysisResult] = useState<AnalyzeJobMatchOutput | null>(null);
