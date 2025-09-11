@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,39 +9,124 @@ import { ArrowRight, CheckCircle, Clipboard, Copy, Edit, FileText, Lightbulb, Li
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth, db } from '@/lib/firebase';
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import type { ResumeData } from '@/types/resume';
+import { generateLinkedInSummary } from '@/ai/flows/generate-linkedin-summary';
+import { recommendSkillsForLinkedIn } from '@/ai/flows/recommend-skills-for-linkedin';
 
-const resumes = [
-  { id: '1', name: 'Software Developer Resume' },
-  { id: '2', name: 'Data Analyst Resume' },
-  { id: '3', name: 'Product Manager Resume' },
-];
+interface ResumeRecord {
+  id: string;
+  text: string;
+}
 
-const headlineSuggestions = [
-    'Senior Full-Stack Developer | React & Node.js Expert',
-    'Software Engineer | Building Scalable Web Solutions',
-    'Full-Stack Developer | 5+ Years in FinTech',
-];
-
-const aboutText = "I'm a passionate software developer with 5+ years of experience building scalable web applications. I specialize in React, Node.js, and modern JavaScript frameworks.\n\n🚀 What I bring to the table:\n• Full-stack development expertise\n• Team leadership and mentoring\n• Agile development methodologies\n• Problem-solving and innovation\n\n💡 Always excited about new technologies and collaboration opportunities!\n\n📧 Let's connect: john@example.com";
-
-const currentSkills = ['React', 'JavaScript', 'Node.js', 'Python'];
-const suggestedSkills = ['TypeScript', 'AWS', 'MongoDB', 'Docker', 'GraphQL', 'Redux', 'Express.js', 'Git'];
-
-const skillPriorities = {
-    'High Demand': ['TypeScript', 'AWS', 'Docker'],
-    'Growing': ['GraphQL', 'Kubernetes', 'Next.js'],
-    'Established': ['React', 'Node.js', 'JavaScript'],
-};
-
-const marketTrends = [
-    { name: 'Cloud Computing (AWS/Azure)', demand: 'High demand', icon: '🔥' },
-    { name: 'DevOps & CI/CD', demand: 'Growing 23%', icon: '📈' },
-    { name: 'Microservices Architecture', demand: 'High salary', icon: '💰' },
-    { name: 'Machine Learning/AI', demand: 'Emerging', icon: '🚀' },
-];
+const getResumeText = (resumeData: ResumeData) => {
+    return Object.values(resumeData).flat().map(section => {
+        if (typeof section === 'string') return section;
+        if (typeof section === 'object' && section !== null) {
+            if (Array.isArray(section)) {
+                return section.map(item => typeof item === 'object' ? Object.values(item).join(' ') : item).join('\n');
+            }
+            return Object.values(section).join(' ');
+        }
+        return '';
+    }).join('\n\n');
+}
 
 export default function LinkedInOptimizerPage() {
-    const [selectedResume, setSelectedResume] = useState(resumes[0].id);
+    const [user, setUser] = useState<User | null>(null);
+    const [resumes, setResumes] = useState<ResumeRecord[]>([]);
+    const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(false);
+    const [generatedSummary, setGeneratedSummary] = useState('');
+    const [recommendedSkills, setRecommendedSkills] = useState<string[]>([]);
+    const [userProfile, setUserProfile] = useState<{ industry?: string; experienceLevel?: string }>({});
+    const { toast } = useToast();
+    
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+            if (currentUser) {
+                fetchResumes(currentUser.uid);
+                fetchUserProfile(currentUser.uid);
+            } else {
+                setResumes([]);
+            }
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const fetchResumes = async (uid: string) => {
+        setIsLoading(true);
+        try {
+            const resumesCollection = collection(db, `users/${uid}/resumes`);
+            const querySnapshot = await getDocs(resumesCollection);
+            const fetchedResumes = querySnapshot.docs.map(doc => {
+                 const data = doc.data() as ResumeData;
+                return {
+                    id: doc.id,
+                    text: getResumeText(data),
+                };
+            });
+            setResumes(fetchedResumes);
+            if (fetchedResumes.length > 0) {
+                setSelectedResumeId(fetchedResumes[0].id);
+            }
+        } catch (error) {
+            console.error("Error fetching resumes: ", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch your resumes.' });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    const fetchUserProfile = async (uid: string) => {
+        const docRef = doc(db, "users", uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            setUserProfile(docSnap.data());
+        }
+    };
+
+    const handleGenerate = async () => {
+        if (!selectedResumeId) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please select a resume.' });
+            return;
+        }
+        
+        const selectedResume = resumes.find(r => r.id === selectedResumeId);
+        if (!selectedResume) {
+             toast({ variant: 'destructive', title: 'Error', description: 'Could not find selected resume.'});
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const [summaryResult, skillsResult] = await Promise.all([
+                generateLinkedInSummary({ resumeText: selectedResume.text }),
+                userProfile.industry && userProfile.experienceLevel 
+                    ? recommendSkillsForLinkedIn({ industry: userProfile.industry, experienceLevel: userProfile.experienceLevel })
+                    : Promise.resolve({ recommendedSkills: [] })
+            ]);
+
+            setGeneratedSummary(summaryResult.linkedinSummary);
+            setRecommendedSkills(skillsResult.recommendedSkills);
+            toast({ title: 'Success', description: 'LinkedIn content generated!' });
+
+        } catch (error) {
+            console.error("Error generating content:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate LinkedIn content.' });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        toast({ title: "Copied!", description: "Content copied to clipboard." });
+    };
 
     return (
         <div className="container py-10">
@@ -55,139 +140,98 @@ export default function LinkedInOptimizerPage() {
                     <CardTitle>Step 1: Choose Source Resume</CardTitle>
                     <CardDescription>Select the resume you want to use as a base for your LinkedIn profile.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                    {resumes.map(resume => (
-                        <Card 
-                            key={resume.id} 
-                            className={`p-4 cursor-pointer flex justify-between items-center ${selectedResume === resume.id ? 'border-primary ring-2 ring-primary' : ''}`}
-                            onClick={() => setSelectedResume(resume.id)}
-                        >
-                            <div className="flex items-center gap-3">
-                                <FileText className="h-6 w-6 text-primary" />
-                                <p className="font-semibold">{resume.name}</p>
-                            </div>
-                            {selectedResume === resume.id ? (
-                                <Badge><CheckCircle className="mr-2 h-4 w-4" /> Selected</Badge>
-                            ) : (
-                                <Button variant="outline" size="sm">Select</Button>
-                            )}
-                        </Card>
-                    ))}
+                <CardContent className="space-y-4">
+                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {resumes.map(resume => (
+                            <Card 
+                                key={resume.id} 
+                                className={`p-4 cursor-pointer flex justify-between items-center ${selectedResumeId === resume.id ? 'border-primary ring-2 ring-primary' : ''}`}
+                                onClick={() => setSelectedResumeId(resume.id)}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <FileText className="h-6 w-6 text-primary" />
+                                    <p className="font-semibold">{resume.id}</p>
+                                </div>
+                                {selectedResumeId === resume.id && <CheckCircle className="h-5 w-5 text-green-500" />}
+                            </Card>
+                        ))}
+                         {resumes.length === 0 && !isLoading && <p className="text-sm text-muted-foreground">No resumes found.</p>}
+                    </div>
+                     <div className="text-center pt-4">
+                         <Button size="lg" onClick={handleGenerate} disabled={isLoading || !selectedResumeId}>
+                            {isLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                            <Sparkles className="mr-2" /> Generate LinkedIn Content
+                        </Button>
+                    </div>
                 </CardContent>
             </Card>
 
+            {(generatedSummary || recommendedSkills.length > 0) && (
             <div className="grid lg:grid-cols-2 gap-8 items-start">
                 <div className="space-y-8">
                     <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Linkedin /> LinkedIn Profile Sections</CardTitle>
+                            <CardTitle className="flex items-center gap-2"><Linkedin /> Generated LinkedIn Sections</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                            {/* Professional Headline */}
-                            <Card className="p-4 bg-background">
-                                <h3 className="font-semibold mb-2">Professional Headline</h3>
-                                <p className="text-sm text-muted-foreground mb-4">Current: Software Developer</p>
-                                <Separator className="mb-4" />
-                                <h4 className="text-sm font-semibold mb-2">AI Suggestions:</h4>
-                                <div className="space-y-2">
-                                    {headlineSuggestions.map((suggestion, i) => (
-                                        <div key={i} className="flex items-center justify-between p-2 bg-muted/50 rounded-md text-sm">
-                                            <span className="flex-grow">✨ {suggestion}</span>
-                                            <div className="flex gap-1">
-                                               <Button variant="ghost" size="sm">Use</Button>
-                                               <Button variant="ghost" size="icon" className="h-8 w-8"><Edit className="h-4 w-4" /></Button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                <Button variant="link" className="p-0 h-auto mt-2">Generate More</Button>
-                            </Card>
-
                             {/* About Section */}
                             <Card className="p-4 bg-background">
-                                <h3 className="font-semibold mb-2">About Section</h3>
-                                <Textarea value={aboutText} rows={12} readOnly />
-                                <div className="flex justify-between items-center mt-2 text-sm text-muted-foreground">
-                                    <span>Character count: {aboutText.length}/2600</span>
-                                    <div className="flex gap-2">
-                                        <Button variant="outline" size="sm"><RefreshCw className="mr-2" /> Regenerate</Button>
-                                        <Button variant="secondary" size="sm"><Copy className="mr-2" /> Copy</Button>
-                                    </div>
+                                <h3 className="font-semibold mb-2">Generated "About" Section</h3>
+                                <Textarea value={generatedSummary} rows={12} readOnly />
+                                <div className="flex justify-end items-center mt-2">
+                                    <Button variant="secondary" size="sm" onClick={() => copyToClipboard(generatedSummary)}>
+                                        <Copy className="mr-2" /> Copy Section
+                                    </Button>
                                 </div>
                             </Card>
 
                             {/* Skills Optimization */}
                             <Card className="p-4 bg-background">
-                                <h3 className="font-semibold mb-2">Skills Optimization</h3>
-                                <p className="text-sm text-muted-foreground mb-2">Current Skills: {currentSkills.join(', ')}</p>
+                                <h3 className="font-semibold mb-2">Skills Recommendations</h3>
+                                <p className="text-sm text-muted-foreground mb-4">
+                                    Based on your profile's industry ({userProfile.industry || 'N/A'}) and experience ({userProfile.experienceLevel || 'N/A'}).
+                                </p>
                                 <Separator className="my-4" />
-                                <h4 className="text-sm font-semibold mb-2">Suggested Additions:</h4>
+                                <h4 className="text-sm font-semibold mb-2">Suggested Skills to Add:</h4>
                                 <div className="flex flex-wrap gap-2 mb-4">
-                                    {suggestedSkills.map(skill => <Button key={skill} variant="outline" size="sm">+ {skill}</Button>)}
+                                    {recommendedSkills.map(skill => <Badge key={skill} variant="outline">{skill}</Badge>)}
                                 </div>
-                                 <h4 className="text-sm font-semibold mb-2">Skills Priority (based on your industry):</h4>
-                                 <div className="space-y-2">
-                                     {Object.entries(skillPriorities).map(([priority, skills]) => (
-                                         <div key={priority} className="flex items-start gap-2">
-                                            <span className="font-semibold text-sm w-28">{priority}:</span>
-                                            <div className="flex flex-wrap gap-1">
-                                                {skills.map(skill => <Badge key={skill} variant="secondary">{skill}</Badge>)}
-                                            </div>
-                                         </div>
-                                     ))}
-                                 </div>
+                                <div className="flex justify-end items-center mt-2">
+                                     <Button variant="secondary" size="sm" onClick={() => copyToClipboard(recommendedSkills.join(', '))}>
+                                        <Copy className="mr-2" /> Copy Skills
+                                    </Button>
+                                </div>
                             </Card>
                         </CardContent>
                     </Card>
                 </div>
 
-                <div className="space-y-8 lg:sticky lg:top-8">
+                 <div className="space-y-8 lg:sticky lg:top-8">
                      <Card>
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2"><Target /> Industry Insights</CardTitle>
+                            <CardTitle className="flex items-center gap-2"><Target /> Quick Insights</CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="text-center">
-                                <p className="text-muted-foreground">Profile Optimization Score</p>
-                                <p className="text-5xl font-bold font-headline">87<span className="text-3xl text-muted-foreground">/100</span></p>
-                                <Progress value={87} className="mt-2" />
-                            </div>
-                             <div>
-                                <h4 className="font-semibold mb-2 flex items-center gap-2"><CheckCircle className="text-green-500"/> Strengths</h4>
-                                <ul className="list-disc list-inside text-sm text-muted-foreground">
-                                    <li>Professional headline with keywords</li>
-                                    <li>Detailed about section</li>
-                                    <li>Relevant skills listed</li>
-                                </ul>
+                        <CardContent className="space-y-4">
+                            <p className="text-sm text-muted-foreground">These AI-powered suggestions are designed to boost your profile's visibility to recruiters on LinkedIn.</p>
+                             <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                                <Lightbulb className="h-5 w-5 text-yellow-400 mt-1 shrink-0" />
+                                <p className="text-sm">
+                                    <strong>Tip:</strong> After adding these to your profile, ask connections to endorse your new skills to increase their weight in recruiter searches.
+                                </p>
                              </div>
-                             <div>
-                                <h4 className="font-semibold mb-2 flex items-center gap-2"><XCircle className="text-yellow-500"/> Areas for Improvement</h4>
-                                <ul className="list-disc list-inside text-sm text-muted-foreground">
-                                    <li>Add industry certifications</li>
-                                    <li>Include media/portfolio links</li>
-                                    <li>Add call-to-action in about section</li>
-                                </ul>
+                             <div className="flex items-start gap-3 p-3 bg-muted/50 rounded-lg">
+                                <Lightbulb className="h-5 w-5 text-yellow-400 mt-1 shrink-0" />
+                                <p className="text-sm">
+                                    <strong>Next Step:</strong> Consider creating a custom headline that incorporates some of the top recommended skills to grab immediate attention.
+                                </p>
                              </div>
                         </CardContent>
                     </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Export Your LinkedIn Content</CardTitle>
-                        </CardHeader>
-                         <CardContent className="space-y-4">
-                            <Button className="w-full justify-between">
-                                Copy Headline <Copy />
-                            </Button>
-                             <Button className="w-full justify-between">
-                                Copy About Section <Copy />
-                            </Button>
-                             <Button className="w-full justify-between">
-                                Copy All Skills <Copy />
-                            </Button>
-                         </CardContent>
-                    </Card>
                 </div>
             </div>
+            )}
         </div>
     );
 }
+
+    
