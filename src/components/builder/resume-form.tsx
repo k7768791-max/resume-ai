@@ -11,11 +11,13 @@ import { Card } from "../ui/card";
 import { generateProfessionalSummary } from "@/ai/flows/generate-professional-summary";
 import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
+import { optimizeResumeContent } from "@/ai/flows/optimize-resume-content";
 
 export function ResumeForm() {
     const { resumeData, setResumeData } = useResume();
     const { toast } = useToast();
     const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
+    const [optimizingIndex, setOptimizingIndex] = useState<number | null>(null);
 
     const handleChange = (section: 'personal', field: string, value: string) => {
         setResumeData(prev => ({
@@ -126,6 +128,20 @@ export function ResumeForm() {
             setIsGeneratingSummary(false);
         }
     };
+    
+    const onOptimizeDescription = async (index: number, description: string) => {
+        setOptimizingIndex(index);
+        try {
+            const result = await optimizeResumeContent({ resumeSection: description });
+            handleListItemChange('work', index, 'description', result.optimizedContent);
+            toast({ title: 'Success', description: 'Work description optimized.' });
+        } catch (error) {
+            console.error(error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to optimize description.' });
+        } finally {
+            setOptimizingIndex(null);
+        }
+    };
 
     return (
         <div className="h-full">
@@ -234,7 +250,13 @@ export function ResumeForm() {
                                             <Input placeholder="Start Date" value={job.startDate} onChange={e => handleListItemChange('work', index, 'startDate', e.target.value)} />
                                             <Input placeholder="End Date" value={job.endDate} onChange={e => handleListItemChange('work', index, 'endDate', e.target.value)} />
                                         </div>
-                                        <Textarea placeholder="Description..." value={job.description} onChange={e => handleListItemChange('work', index, 'description', e.target.value)} />
+                                        <div className="relative">
+                                            <Textarea placeholder="Description..." value={job.description} onChange={e => handleListItemChange('work', index, 'description', e.target.value)} />
+                                            <Button size="sm" variant="ghost" className="absolute bottom-2 right-2" onClick={() => onOptimizeDescription(index, job.description)} disabled={optimizingIndex === index}>
+                                                {optimizingIndex === index ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Sparkles className="mr-2 h-4 w-4"/>}
+                                                Optimize
+                                            </Button>
+                                        </div>
                                     </div>
                                 </Card>
                             ))}
