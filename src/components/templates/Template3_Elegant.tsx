@@ -15,7 +15,8 @@ export function Template3_Elegant({ data }: { data: ResumeData }) {
             <div className="w-24 h-px bg-gray-300 mx-auto mb-8"></div>
 
             <section className="mb-6">
-                <p className="text-center italic text-gray-600">{summary}</p>
+                 <h2 className="text-center text-sm font-bold tracking-widest uppercase text-gray-500 mb-3">Summary</h2>
+                <p className="text-center text-sm text-gray-600">{summary}</p>
             </section>
 
              <section className="mb-6">
@@ -32,6 +33,17 @@ export function Template3_Elegant({ data }: { data: ResumeData }) {
                             <p className="text-xs text-gray-500">{job.startDate} to {job.endDate}</p>
                         </div>
                         <p className="mt-1 text-sm text-center">{job.description}</p>
+                    </div>
+                ))}
+            </section>
+            
+            <section className="mb-6">
+                <h2 className="text-center text-sm font-bold tracking-widest uppercase text-gray-500 mb-3">Projects</h2>
+                {projects.map((project, index) => (
+                     <div key={index} className="mb-4 text-center">
+                        <h3 className="text-lg font-semibold">{project.name}</h3>
+                        <p className="text-xs italic text-gray-500 mb-1">{project.techStack}</p>
+                        <p className="mt-1 text-sm">{project.description}</p>
                     </div>
                 ))}
             </section>

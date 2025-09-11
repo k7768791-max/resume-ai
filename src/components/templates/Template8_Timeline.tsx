@@ -10,45 +10,55 @@ export function Template8_Timeline({ data }: { data: ResumeData }) {
                 <p className="text-sm">{personal.email} | {personal.phone} | {personal.location}</p>
             </header>
 
-            <div className="grid grid-cols-4 gap-8">
-                <div className="col-span-1 border-r pr-8">
-                    <section className="mb-6">
-                        <h2 className="font-bold text-sm uppercase tracking-wider text-gray-500 mb-3">Skills</h2>
-                        <ul className="text-sm">
-                            {skills.technical.map(skill => <li key={skill}>{skill}</li>)}
-                        </ul>
-                    </section>
-                    <section>
-                        <h2 className="font-bold text-sm uppercase tracking-wider text-gray-500 mb-3">Education</h2>
-                        {education.map((edu, index) => (
-                             <div key={index} className="text-sm">
-                                <h3 className="font-bold">{edu.school}</h3>
-                                <p>{edu.degree}</p>
-                                <p className="text-xs">{edu.endDate}</p>
+            <section className="mb-6">
+                <h2 className="font-bold text-sm uppercase tracking-wider text-gray-500 mb-3 text-center">Summary</h2>
+                <p className="text-sm text-center">{summary}</p>
+            </section>
+
+            <section className="mb-6">
+                <h2 className="font-bold text-sm uppercase tracking-wider text-gray-500 mb-3 text-center">Skills</h2>
+                <p className="text-sm text-center">{skills.technical.join(' • ')}</p>
+            </section>
+
+            <section className="mb-6">
+                <h2 className="font-bold text-lg uppercase tracking-wider text-gray-700 mb-4">Experience</h2>
+                <div className="relative border-l-2 border-gray-300 pl-6">
+                    {work.map((job, index) => (
+                        <div key={index} className="mb-6 ml-4">
+                            <span className="absolute -left-[9px] flex items-center justify-center w-4 h-4 bg-gray-300 rounded-full ring-4 ring-white"></span>
+                            <div className="flex justify-between items-baseline">
+                                <h3 className="font-bold">{job.title} at {job.company}</h3>
+                                <p className="text-xs text-gray-500 mb-1">{job.startDate} - {job.endDate}</p>
                             </div>
-                        ))}
-                    </section>
-                </div>
-                <div className="col-span-3">
-                    <section className="mb-6">
-                        <h2 className="font-bold text-sm uppercase tracking-wider text-gray-500 mb-3">Summary</h2>
-                        <p className="text-sm">{summary}</p>
-                    </section>
-                    <section>
-                        <h2 className="font-bold text-sm uppercase tracking-wider text-gray-500 mb-3">Experience</h2>
-                        <div className="relative border-l-2 border-gray-200">
-                            {work.map((job, index) => (
-                                <div key={index} className="mb-6 ml-6">
-                                    <span className="absolute -left-[9px] flex items-center justify-center w-4 h-4 bg-gray-200 rounded-full ring-4 ring-white"></span>
-                                    <h3 className="font-bold">{job.title} at {job.company}</h3>
-                                    <p className="text-xs text-gray-500 mb-1">{job.startDate} - {job.endDate}</p>
-                                    <p className="text-sm">{job.description}</p>
-                                </div>
-                            ))}
+                            <p className="text-sm">{job.description}</p>
                         </div>
-                    </section>
+                    ))}
                 </div>
-            </div>
+            </section>
+            
+            <section className="mb-6">
+                 <h2 className="font-bold text-lg uppercase tracking-wider text-gray-700 mb-4">Projects</h2>
+                 {projects.map((project, index) => (
+                    <div key={index} className="mb-4">
+                        <h3 className="font-bold">{project.name}</h3>
+                        <p className="text-xs italic text-gray-500 mb-1">{project.techStack}</p>
+                        <p className="text-sm">{project.description}</p>
+                    </div>
+                ))}
+            </section>
+            
+            <section>
+                <h2 className="font-bold text-lg uppercase tracking-wider text-gray-700 mb-4">Education</h2>
+                {education.map((edu, index) => (
+                     <div key={index} className="text-sm mb-2">
+                        <div className="flex justify-between items-baseline">
+                            <h3 className="font-bold">{edu.school}</h3>
+                            <p className="text-xs">{edu.startDate} - {edu.endDate}</p>
+                        </div>
+                        <p>{edu.degree}</p>
+                    </div>
+                ))}
+            </section>
         </div>
     );
 }
