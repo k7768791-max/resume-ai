@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Activity, ArrowUpRight, Bot, Copy, FilePlus, FileText, Filter, Linkedin, Search, Send, Star, Trash2, TrendingUp, Loader2 } from "lucide-react";
+import { Activity, ArrowUpRight, Bot, Copy, FilePlus, FileText, Filter, Linkedin, Search, Send, Star, Trash2, TrendingUp, Loader2, Mail } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { auth } from '@/lib/firebase';
@@ -30,9 +30,9 @@ const quickActions = [
     { title: "New Resume", description: "Create from scratch", icon: <FilePlus className="h-8 w-8 text-primary" />, href: "/builder/new" },
     { title: "ATS Check", description: "Upload for analysis", icon: <Bot className="h-8 w-8 text-primary" />, href: "/ats-analyzer" },
     { title: "Job Match", description: "Find opportunities", icon: <TrendingUp className="h-8 w-8 text-primary" />, href: "/job-matcher" },
-    { title: "Templates", description: "Browse our templates", icon: <FileText className="h-8 w-8 text-primary" />, href: "/templates" },
+    { title: "Cover Letter", description: "Generate a letter", icon: <Mail className="h-8 w-8 text-primary" />, href: "/cover-letter" },
     { title: "LinkedIn", description: "Optimize your profile", icon: <Linkedin className="h-8 w-8 text-primary" />, href: "/linkedin-optimizer" },
-    { title: "Analytics", description: "View success metrics", icon: <TrendingUp className="h-8 w-8 text-primary" />, href: "/dashboard" },
+    { title: "Templates", description: "Browse our templates", icon: <FileText className="h-8 w-8 text-primary" />, href: "/templates" },
 ];
 
 const recentActivities = [

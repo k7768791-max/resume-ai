@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { auth } from "@/lib/firebase";
 import { signOut } from "firebase/auth";
-import { LifeBuoy, LogOut, Settings, User, Menu, Bot, FileText, Home, LayoutTemplate, Linkedin, Target, TrendingUp } from "lucide-react";
+import { LifeBuoy, LogOut, Settings, User, Menu, Bot, FileText, Home, LayoutTemplate, Linkedin, Target, TrendingUp, Mail } from "lucide-react";
 import { Logo } from "../icons";
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -23,6 +23,7 @@ const navLinks = [
     { href: '/tailor', label: 'Tailoring', icon: <Target /> },
     { href: '/job-matcher', label: 'Job Matcher', icon: <TrendingUp /> },
     { href: '/linkedin-optimizer', label: 'LinkedIn', icon: <Linkedin /> },
+    { href: '/cover-letter', label: 'Cover Letter', icon: <Mail /> },
 ];
 
 export function AppHeader() {
