@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,12 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { Table, TableBody, TableCell, TableHeader, TableHead, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CircleDollarSign, BarChart, BookUser, ChevronRight, CreditCard, Download, Edit, File, FileClock, History, Settings, Shield, Star, Trophy, UserCog } from "lucide-react";
-import { Line, LineChart, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { BookUser, CreditCard, Edit, Settings, Shield, UserCog, Loader2 } from "lucide-react";
+import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
+// Static data that was previously in the component
 const usageStats = [
     { name: 'ATS Analyses', value: 47, max: 100, color: 'bg-primary' },
     { name: 'Resume Exports', value: 23, max: Infinity, color: 'bg-accent' },
@@ -26,25 +29,92 @@ const billingHistory = [
     { date: 'Dec 15, 2023', plan: 'Premium Plan', amount: '$9.99' },
 ];
 
-const successMetrics = [
-    { name: 'Resumes Created', value: '5', icon: <File className="text-primary"/> },
-    { name: 'Average ATS Score', value: '87%', icon: <Trophy className="text-primary"/> },
-    { name: 'Score Improvement', value: '+23%', icon: <BarChart className="text-primary"/> },
-    { name: 'Jobs Applied To', value: '12', icon: <FileClock className="text-primary"/> },
-    { name: 'Interview Callbacks', value: '4 (33%)', icon: <Star className="text-primary"/> },
-    { name: 'Job Offers', value: '1', icon: <CircleDollarSign className="text-primary"/> },
-];
 
-const chartData = [
-  { month: 'Jan', score: 72 },
-  { month: 'Feb', score: 78 },
-  { month: 'Mar', score: 85 },
-  { month: 'Apr', score: 91 },
-  { month: 'May', score: 88 },
-  { month: 'Jun', score: 92 },
-];
+interface UserProfile {
+    fullName: string;
+    email: string;
+    phone: string;
+    location: string;
+    linkedin: string;
+    github: string;
+    industry: string;
+    experienceLevel: string;
+}
 
 export default function ProfilePage() {
+    const [user, setUser] = useState<User | null>(null);
+    const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+            if (currentUser) {
+                fetchProfile(currentUser.uid);
+            } else {
+                setIsLoading(false);
+            }
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const fetchProfile = async (uid: string) => {
+        setIsLoading(true);
+        try {
+            const docRef = doc(db, 'users', uid);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                setProfile(docSnap.data() as UserProfile);
+            } else {
+                // If no profile, create a default one
+                const defaultProfile: UserProfile = {
+                    fullName: user?.displayName || 'New User',
+                    email: user?.email || '',
+                    phone: '', location: '', linkedin: '', github: '',
+                    industry: 'software-development',
+                    experienceLevel: 'mid'
+                };
+                setProfile(defaultProfile);
+            }
+        } catch (error) {
+            console.error("Error fetching profile: ", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch profile.' });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleInputChange = (field: keyof UserProfile, value: string) => {
+        if (profile) {
+            setProfile({ ...profile, [field]: value });
+        }
+    };
+
+    const handleSave = async () => {
+        if (!user || !profile) return;
+        setIsSaving(true);
+        try {
+            const docRef = doc(db, 'users', user.uid);
+            await setDoc(docRef, profile, { merge: true });
+            toast({ title: 'Success', description: 'Your profile has been updated.' });
+        } catch (error) {
+            console.error("Error saving profile: ", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to save profile.' });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    if (isLoading) {
+        return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>;
+    }
+    
+    if (!profile) {
+        return <div className="text-center">Please log in to view your profile.</div>;
+    }
+
     return (
         <div className="container py-10 space-y-8">
             <h1 className="text-3xl font-bold font-headline">User Profile</h1>
@@ -53,19 +123,19 @@ export default function ProfilePage() {
                 <CardContent className="p-6 flex flex-col md:flex-row items-center gap-6">
                     <div className="relative">
                         <Avatar className="h-24 w-24">
-                            <AvatarImage src="https://picsum.photos/200" alt="User avatar" data-ai-hint="person headshot" />
-                            <AvatarFallback>JD</AvatarFallback>
+                            <AvatarImage src={user?.photoURL || "https://picsum.photos/200"} alt="User avatar" data-ai-hint="person headshot" />
+                            <AvatarFallback>{profile.fullName.substring(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <Button size="icon" variant="outline" className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full">
                             <Edit className="h-4 w-4" />
                         </Button>
                     </div>
                     <div className="flex-1 text-center md:text-left">
-                        <h2 className="text-2xl font-bold">John Developer</h2>
-                        <p className="text-muted-foreground">john.developer@email.com</p>
-                        <p className="text-sm text-muted-foreground mt-1">Member since: January 2024</p>
+                        <h2 className="text-2xl font-bold">{profile.fullName}</h2>
+                        <p className="text-muted-foreground">{profile.email}</p>
+                        <p className="text-sm text-muted-foreground mt-1">Member since: {user?.metadata.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : 'N/A'}</p>
                     </div>
-                    <div className="text-center md:text-right">
+                     <div className="text-center md:text-right">
                         <p className="font-semibold">Plan: <span className="text-primary">Premium</span></p>
                         <Button variant="link" className="p-0 h-auto">Upgrade Plan</Button>
                         <p className="text-sm text-muted-foreground mt-1">47/100 ATS checks this month</p>
@@ -91,31 +161,31 @@ export default function ProfilePage() {
                             <div className="grid md:grid-cols-2 gap-6">
                                 <div>
                                     <Label htmlFor="fullname">Full Name</Label>
-                                    <Input id="fullname" defaultValue="John Developer" />
+                                    <Input id="fullname" value={profile.fullName} onChange={e => handleInputChange('fullName', e.target.value)} />
                                 </div>
                                 <div>
                                     <Label htmlFor="email">Email Address</Label>
-                                    <Input id="email" type="email" defaultValue="john.developer@email.com" />
+                                    <Input id="email" type="email" value={profile.email} onChange={e => handleInputChange('email', e.target.value)} />
                                 </div>
                                  <div>
                                     <Label htmlFor="phone">Phone Number</Label>
-                                    <Input id="phone" defaultValue="+1 (555) 123-4567" />
+                                    <Input id="phone" value={profile.phone} onChange={e => handleInputChange('phone', e.target.value)} />
                                 </div>
                                  <div>
                                     <Label htmlFor="location">Location</Label>
-                                    <Input id="location" defaultValue="San Francisco, CA" />
+                                    <Input id="location" value={profile.location} onChange={e => handleInputChange('location', e.target.value)} />
                                 </div>
                                  <div>
                                     <Label htmlFor="linkedin">LinkedIn</Label>
-                                    <Input id="linkedin" defaultValue="linkedin.com/in/johndeveloper" />
+                                    <Input id="linkedin" value={profile.linkedin} onChange={e => handleInputChange('linkedin', e.target.value)} />
                                 </div>
                                  <div>
                                     <Label htmlFor="github">GitHub</Label>
-                                    <Input id="github" defaultValue="github.com/johndeveloper" />
+                                    <Input id="github" value={profile.github} onChange={e => handleInputChange('github', e.target.value)} />
                                 </div>
                                 <div>
                                     <Label htmlFor="industry">Industry</Label>
-                                    <Select defaultValue="software-development">
+                                    <Select value={profile.industry} onValueChange={value => handleInputChange('industry', value)}>
                                         <SelectTrigger><SelectValue/></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="software-development">Software Development</SelectItem>
@@ -126,7 +196,7 @@ export default function ProfilePage() {
                                 </div>
                                  <div>
                                     <Label htmlFor="experience">Experience Level</Label>
-                                     <Select defaultValue="senior">
+                                     <Select value={profile.experienceLevel} onValueChange={value => handleInputChange('experienceLevel', value)}>
                                         <SelectTrigger><SelectValue/></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="entry">Entry-level (0-2 years)</SelectItem>
@@ -139,13 +209,16 @@ export default function ProfilePage() {
                             </div>
                         </CardContent>
                         <CardFooter>
-                            <Button>Save Changes</Button>
+                            <Button onClick={handleSave} disabled={isSaving}>
+                                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Save Changes
+                            </Button>
                         </CardFooter>
                     </Card>
                 </TabsContent>
-
+                {/* Other tabs remain static for now */}
                 <TabsContent value="subscription">
-                    <Card>
+                     <Card>
                         <CardHeader>
                             <CardTitle>Subscription & Billing</CardTitle>
                             <CardDescription>Manage your plan, billing details, and view usage.</CardDescription>
@@ -228,41 +301,6 @@ export default function ProfilePage() {
                     </Card>
                 </TabsContent>
             </Tabs>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Your Resume Analytics</CardTitle>
-                </CardHeader>
-                <CardContent className="grid md:grid-cols-2 gap-8">
-                     <div className="space-y-4">
-                        <h3 className="font-semibold">Success Metrics</h3>
-                        <div className="grid sm:grid-cols-2 gap-4">
-                            {successMetrics.map(metric => (
-                                <Card key={metric.name} className="p-4 flex items-start gap-4 bg-background">
-                                    <div className="text-2xl mt-1">{metric.icon}</div>
-                                    <div>
-                                        <p className="font-bold text-xl">{metric.value}</p>
-                                        <p className="text-sm text-muted-foreground">{metric.name}</p>
-                                    </div>
-                                </Card>
-                            ))}
-                        </div>
-                     </div>
-                     <div>
-                        <h3 className="font-semibold mb-4">ATS Score Trend</h3>
-                         <ResponsiveContainer width="100%" height={300}>
-                            <LineChart data={chartData}>
-                                <CartesianGrid strokeDasharray="3 3" />
-                                <XAxis dataKey="month" />
-                                <YAxis domain={[50, 100]} />
-                                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--background))' }} />
-                                <Line type="monotone" dataKey="score" stroke="hsl(var(--primary))" strokeWidth={2} activeDot={{ r: 8 }} />
-                            </LineChart>
-                        </ResponsiveContainer>
-                        <p className="text-center text-sm text-muted-foreground mt-2">🎉 Great progress! Your ATS scores are consistently high.</p>
-                     </div>
-                </CardContent>
-            </Card>
         </div>
     );
 }
