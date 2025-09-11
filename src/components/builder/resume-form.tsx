@@ -6,11 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useResume } from "@/context/ResumeContext";
-import { Bot, CaseSensitive, Contact, GraduationCap, Hand, Home, Pencil, PlusCircle, Trash2, Trophy, Award, Heart, Sparkles } from "lucide-react";
+import { Bot, CaseSensitive, Contact, GraduationCap, Hand, Home, Pencil, PlusCircle, Trash2, Trophy, Award, Heart, Sparkles, Loader2 } from "lucide-react";
 import { Card } from "../ui/card";
+import { generateProfessionalSummary } from "@/ai/flows/generate-professional-summary";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 export function ResumeForm() {
     const { resumeData, setResumeData } = useResume();
+    const { toast } = useToast();
+    const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
     const handleChange = (section: 'personal', field: string, value: string) => {
         setResumeData(prev => ({
@@ -106,6 +111,22 @@ export function ResumeForm() {
         }));
     };
 
+    const onGenerateSummary = async () => {
+        setIsGeneratingSummary(true);
+        try {
+            const skillsText = resumeData.skills.technical.join(', ');
+            const experienceText = resumeData.work.map(j => `${j.title} at ${j.company}: ${j.description}`).join('\n');
+            const result = await generateProfessionalSummary({ skills: skillsText, experience: experienceText });
+            setResumeData(prev => ({ ...prev, summary: result.summary }));
+            toast({ title: 'Success', description: 'Professional summary generated.' });
+        } catch (error) {
+            console.error(error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate summary.' });
+        } finally {
+            setIsGeneratingSummary(false);
+        }
+    };
+
     return (
         <div className="h-full">
             <h2 className="text-xl font-headline font-bold mb-4">Resume Sections</h2>
@@ -128,7 +149,7 @@ export function ResumeForm() {
                                 <Label className="text-xs text-muted-foreground">Email</Label>
                                 <Input placeholder="john.doe@email.com" value={resumeData.personal.email} onChange={e => handleChange('personal', 'email', e.target.value)} />
                             </div>
-                             <div>
+                             <div>_
                                 <Label className="text-xs text-muted-foreground">Phone</Label>
                                 <Input placeholder="123-456-7890" value={resumeData.personal.phone} onChange={e => handleChange('personal', 'phone', e.target.value)} />
                             </div>
@@ -159,7 +180,10 @@ export function ResumeForm() {
                      <AccordionContent className="p-4 pt-0">
                         <div className="relative">
                             <Textarea placeholder="Experienced software developer with..." rows={5} value={resumeData.summary} onChange={e => handleSummaryChange(e.target.value)}/>
-                            <Button size="sm" variant="ghost" className="absolute bottom-2 right-2"><Bot className="mr-2 h-4 w-4"/> Generate</Button>
+                            <Button size="sm" variant="ghost" className="absolute bottom-2 right-2" onClick={onGenerateSummary} disabled={isGeneratingSummary}>
+                                {isGeneratingSummary ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <Bot className="mr-2 h-4 w-4"/>}
+                                Generate
+                            </Button>
                         </div>
                      </AccordionContent>
                 </AccordionItem>
