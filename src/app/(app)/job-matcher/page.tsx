@@ -1,50 +1,26 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowRight, BookOpen, CheckCircle, Circle, Copy, Eye, FileText, Heart, Lightbulb, MapPin, Milestone, Search, Sparkles, Target, Wallet, XCircle } from 'lucide-react';
+import { ArrowRight, BookOpen, CheckCircle, Circle, Copy, Eye, FileText, Heart, Lightbulb, Loader2, MapPin, Milestone, Search, Sparkles, Target, Wallet, XCircle } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/hooks/use-toast';
+import { analyzeJobMatch, AnalyzeJobMatchOutput } from '@/ai/flows/analyze-job-match';
+import { auth, db } from '@/lib/firebase';
+import { collection, getDocs } from 'firebase/firestore';
+import type { ResumeData } from '@/types/resume';
+import { onAuthStateChanged } from 'firebase/auth';
+import { User } from 'firebase/auth';
 
-const resumes = [
-  { id: '1', name: 'Software Dev Resume', atsScore: 92 },
-  { id: '2', name: 'Data Analyst Resume', atsScore: 78 },
-  { id: '3', name: 'Product Mgr Resume', atsScore: 85 },
-];
-
-const matchBreakdown = [
-    { name: 'Skills Match', score: 87, color: 'text-primary' },
-    { name: 'Experience Level', score: 92, color: 'text-primary' },
-    { name: 'Industry Fit', score: 78, color: 'text-yellow-500' },
-    { name: 'Location Match', score: 65, color: 'text-yellow-500' },
-    { name: 'Salary Expectation', score: 89, color: 'text-primary' },
-];
-
-const requirements = {
-    met: [
-        '5+ years software development experience',
-        'Proficiency in React and JavaScript',
-        'Experience with RESTful APIs',
-        'Team collaboration and leadership skills',
-        'Bachelor\'s degree in Computer Science',
-        'Version control (Git) experience',
-    ],
-    partial: [
-        'Docker & Kubernetes (you have Docker only)',
-        'Microservices architecture (limited experience)',
-    ],
-    missing: ['GraphQL experience'],
-};
-
-const highPriorityActions = [
-    { title: 'Learn GraphQL Basics', details: ['Complete online course (2-3 hours)', 'Build small project with GraphQL', 'Add to resume and LinkedIn'], cta: 'Recommended Courses', icon: <BookOpen /> },
-    { title: 'Tailor Resume for This Job', details: ['Add microservices experience', 'Highlight Docker/containerization', 'Emphasize team leadership'], cta: 'Auto-Tailor Resume', icon: <Target /> },
-    { title: 'Prepare Application Materials', details: ['Craft compelling cover letter', 'Prepare portfolio showcasing relevant projects', 'Update LinkedIn with matching keywords'], cta: 'Generate Cover Letter', icon: <Sparkles /> },
-]
+interface ResumeRecord {
+  id: string;
+  data: ResumeData;
+}
 
 const similarJobs = [
     { title: 'Full Stack Developer', company: 'StartupXYZ', location: 'Remote', salary: '$110k-$140k', match: 92, details: 'React, Node.js, AWS - Perfect skill alignment' },
@@ -53,8 +29,93 @@ const similarJobs = [
 ]
 
 export default function JobMatcherPage() {
-    const [isAnalyzed, setIsAnalyzed] = useState(false);
-    const [selectedResume, setSelectedResume] = useState(resumes[0].id);
+    const [user, setUser] = useState<User | null>(null);
+    const [resumes, setResumes] = useState<ResumeRecord[]>([]);
+    const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+    const [jobDescription, setJobDescription] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [analysisResult, setAnalysisResult] = useState<AnalyzeJobMatchOutput | null>(null);
+
+    const { toast } = useToast();
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+            if (currentUser) {
+                fetchResumes(currentUser.uid);
+            } else {
+                setResumes([]);
+            }
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const fetchResumes = async (uid: string) => {
+        setIsLoading(true);
+        try {
+            const resumesCollection = collection(db, `users/${uid}/resumes`);
+            const querySnapshot = await getDocs(resumesCollection);
+            const fetchedResumes = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                data: doc.data() as ResumeData,
+            }));
+            setResumes(fetchedResumes);
+            if (fetchedResumes.length > 0) {
+                setSelectedResumeId(fetchedResumes[0].id);
+            }
+        } catch (error) {
+            console.error("Error fetching resumes: ", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch your resumes.' });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleAnalyze = async () => {
+        if (!selectedResumeId) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please select a resume.' });
+            return;
+        }
+        if (!jobDescription) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please paste a job description.' });
+            return;
+        }
+
+        setIsLoading(true);
+        setAnalysisResult(null);
+
+        const selectedResume = resumes.find(r => r.id === selectedResumeId);
+        if (!selectedResume) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not find selected resume.' });
+            setIsLoading(false);
+            return;
+        }
+
+        // Basic text conversion from resume data
+        const resumeText = Object.values(selectedResume.data).flat().map(section => {
+            if (typeof section === 'string') return section;
+            if (typeof section === 'object') return Object.values(section).join(' ');
+            return '';
+        }).join('\n\n');
+
+
+        try {
+            const result = await analyzeJobMatch({ resumeText, jobDescription });
+            setAnalysisResult(result);
+        } catch (error) {
+            console.error("Error analyzing job match: ", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to analyze job match.' });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const getScoreColor = (score: number) => {
+        if (score > 85) return 'text-green-500';
+        if (score > 70) return 'text-yellow-500';
+        return 'text-red-500';
+    };
+
 
     return (
         <div className="container py-10">
@@ -71,7 +132,7 @@ export default function JobMatcherPage() {
                 <CardContent className="space-y-6">
                      <div className="space-y-2">
                         <label className="font-semibold">Job Description</label>
-                        <Textarea id="job-description" placeholder="Paste the job description or job URL here..." className="h-48" />
+                        <Textarea id="job-description" placeholder="Paste the job description or job URL here..." className="h-48" value={jobDescription} onChange={e => setJobDescription(e.target.value)} />
                     </div>
                      <div className="space-y-2">
                         <label className="font-semibold">Select Resume to Match</label>
@@ -79,28 +140,39 @@ export default function JobMatcherPage() {
                             {resumes.map(resume => (
                                 <Card 
                                     key={resume.id} 
-                                    className={`p-3 cursor-pointer flex items-center gap-3 ${selectedResume === resume.id ? 'border-primary ring-2 ring-primary' : ''}`}
-                                    onClick={() => setSelectedResume(resume.id)}
+                                    className={`p-3 cursor-pointer flex items-center gap-3 ${selectedResumeId === resume.id ? 'border-primary ring-2 ring-primary' : ''}`}
+                                    onClick={() => setSelectedResumeId(resume.id)}
                                 >
                                     <FileText className="h-5 w-5 text-primary" />
                                     <div>
-                                        <p className="font-semibold text-sm">{resume.name}</p>
-                                        <p className="text-xs text-muted-foreground">ATS: {resume.atsScore}%</p>
+                                        <p className="font-semibold text-sm">{resume.id}</p>
                                     </div>
-                                     {selectedResume === resume.id && <CheckCircle className="h-5 w-5 text-primary ml-auto" />}
+                                     {selectedResumeId === resume.id && <CheckCircle className="h-5 w-5 text-primary ml-auto" />}
                                 </Card>
                             ))}
+                            {resumes.length === 0 && !isLoading && (
+                                <p className="text-sm text-muted-foreground">You have no saved resumes. Go to the builder to create one!</p>
+                            )}
                         </div>
                     </div>
                 </CardContent>
                 <div className="p-6 pt-0 text-center">
-                    <Button size="lg" onClick={() => setIsAnalyzed(true)}>
-                        <Search className="mr-2"/> Analyze Job Match
+                    <Button size="lg" onClick={handleAnalyze} disabled={isLoading || !selectedResumeId || !jobDescription}>
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Analyze Job Match
                     </Button>
                 </div>
             </Card>
 
-            {isAnalyzed && (
+            {isLoading && !analysisResult && (
+                <div className="flex items-center justify-center p-10">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="ml-4 text-muted-foreground">Analyzing...</p>
+                </div>
+            )}
+
+
+            {analysisResult && (
                  <div className="space-y-8">
                      {/* Match Analysis Results */}
                     <Card>
@@ -112,79 +184,34 @@ export default function JobMatcherPage() {
                                  <div className="relative h-32 w-32">
                                     <svg className="h-full w-full" viewBox="0 0 36 36">
                                         <path className="text-muted" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3"></path>
-                                        <path className="text-primary" strokeDasharray="85, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"></path>
+                                        <path className={getScoreColor(analysisResult.matchScore)} strokeDasharray={`${analysisResult.matchScore}, 100`} d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"></path>
                                     </svg>
                                     <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                        <span className="text-4xl font-bold font-headline">85%</span>
+                                        <span className="text-4xl font-bold font-headline">{analysisResult.matchScore}%</span>
                                     </div>
                                 </div>
-                                <p className="text-lg font-semibold mt-4">Excellent Match!</p>
+                                <p className="text-lg font-semibold mt-4">
+                                {analysisResult.matchScore > 85 ? "Excellent Match!" : analysisResult.matchScore > 70 ? "Good Match" : "Needs Improvement"}
+                                </p>
                             </div>
                             <div className="md:col-span-2 space-y-3">
-                                <h3 className="font-semibold">Match Breakdown</h3>
-                                {matchBreakdown.map(item => (
-                                    <div key={item.name} className="flex items-center gap-4">
-                                        <span className="w-32 text-muted-foreground text-sm">{item.name}</span>
-                                        <Progress value={item.score} className="flex-1" />
-                                        <span className={`font-semibold w-12 text-right ${item.color}`}>{item.score}%</span>
+                                 <h3 className="font-semibold mb-3">Job Requirements Analysis</h3>
+                                 <div className="p-4 border rounded-lg space-y-4 max-h-60 overflow-y-auto">
+                                    <div>
+                                        <h4 className="flex items-center gap-2 font-medium text-green-500 mb-2"><CheckCircle /> You Meet ({analysisResult.metRequirements.length})</h4>
+                                        <ul className="space-y-1 list-disc list-inside text-sm text-muted-foreground">
+                                            {analysisResult.metRequirements.map((req, i) => <li key={`met-${i}`}>{req}</li>)}
+                                        </ul>
                                     </div>
-                                ))}
+                                    <Separator />
+                                     <div>
+                                        <h4 className="flex items-center gap-2 font-medium text-red-500 mb-2"><XCircle /> Missing ({analysisResult.missingRequirements.length})</h4>
+                                         <ul className="space-y-1 list-disc list-inside text-sm text-muted-foreground">
+                                            {analysisResult.missingRequirements.map((req, i) => <li key={`missing-${i}`}>{req}</li>)}
+                                        </ul>
+                                    </div>
+                                 </div>
                             </div>
-                        </CardContent>
-                        <CardContent>
-                             <h3 className="font-semibold mb-3">Job Requirements Analysis</h3>
-                             <div className="p-4 border rounded-lg space-y-4">
-                                <div>
-                                    <h4 className="flex items-center gap-2 font-medium text-green-500 mb-2"><CheckCircle /> You Meet ({requirements.met.length}/15)</h4>
-                                    <ul className="space-y-1 list-disc list-inside text-sm text-muted-foreground">
-                                        {requirements.met.slice(0,3).map((req, i) => <li key={i}>{req}</li>)}
-                                        <p className='text-primary'>+ {requirements.met.length - 3} more...</p>
-                                    </ul>
-                                </div>
-                                <Separator />
-                                 <div>
-                                    <h4 className="flex items-center gap-2 font-medium text-yellow-500 mb-2"><Circle className="fill-yellow-500/20" /> Partially Meet ({requirements.partial.length})</h4>
-                                    <ul className="space-y-1 list-disc list-inside text-sm text-muted-foreground">
-                                        {requirements.partial.map((req, i) => <li key={i}>{req}</li>)}
-                                    </ul>
-                                </div>
-                                <Separator />
-                                 <div>
-                                    <h4 className="flex items-center gap-2 font-medium text-red-500 mb-2"><XCircle /> Missing ({requirements.missing.length})</h4>
-                                     <ul className="space-y-1 list-disc list-inside text-sm text-muted-foreground">
-                                        {requirements.missing.map((req, i) => <li key={i}>{req}</li>)}
-                                    </ul>
-                                </div>
-                             </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* Recommended Actions */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Recommended Actions</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div>
-                                <h3 className="font-semibold text-lg mb-3 flex items-center gap-2"><Lightbulb className="text-accent"/> High Priority (Before Applying)</h3>
-                                <div className="space-y-4">
-                                {highPriorityActions.map(action => (
-                                    <Card key={action.title} className="p-4 flex gap-4 items-start bg-background">
-                                        <div className="text-primary mt-1">{action.icon}</div>
-                                        <div className="flex-grow">
-                                            <h4 className="font-semibold">{action.title}</h4>
-                                            <ul className="list-disc list-inside text-sm text-muted-foreground mt-1">
-                                                {action.details.map((detail, i) => <li key={i}>{detail}</li>)}
-                                            </ul>
-                                        </div>
-                                        <Button variant="secondary" size="sm">{action.cta}</Button>
-                                    </Card>
-                                ))}
-                                </div>
-                            </div>
-                             <Button className="w-full">
-                                <Target className="mr-2" /> Apply with Tailored Resume
-                            </Button>
                         </CardContent>
                     </Card>
 

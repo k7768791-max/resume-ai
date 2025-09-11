@@ -25,9 +25,12 @@ const AnalyzeJobMatchOutputSchema = z.object({
   matchScore: z
     .number()
     .describe('Overall match score between the resume and job description (0-100).'),
+  metRequirements: z
+    .array(z.string())
+    .describe('List of key requirements from the job description that ARE PRESENT in the resume.'),
   missingRequirements: z
     .array(z.string())
-    .describe('List of key requirements from the job description missing in the resume.'),
+    .describe('List of key requirements from the job description that ARE MISSING from the resume.'),
 });
 export type AnalyzeJobMatchOutput = z.infer<typeof AnalyzeJobMatchOutputSchema>;
 
@@ -39,7 +42,7 @@ const prompt = ai.definePrompt({
   name: 'analyzeJobMatchPrompt',
   input: {schema: AnalyzeJobMatchInputSchema},
   output: {schema: AnalyzeJobMatchOutputSchema},
-  prompt: `You are a job matching expert. Analyze the following resume and job description to determine the match score and identify missing requirements.
+  prompt: `You are a job matching expert. Analyze the following resume and job description to determine the match score and identify met and missing requirements.
 
 Resume:
 {{{resumeText}}}
@@ -47,7 +50,7 @@ Resume:
 Job Description:
 {{{jobDescription}}}
 
-Provide a match score (0-100) and a list of key requirements from the job description that are missing in the resume.
+Provide a match score (0-100). Also, provide a list of key requirements from the job description that are met by the resume, and a list of key requirements that are missing from the resume.
 `, 
 });
 
