@@ -11,7 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { onAuthStateChanged, User } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
+import { db } from '@/lib/firebase-db';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import type { ResumeData } from '@/types/resume';
 import { generateLinkedInSummary } from '@/ai/flows/generate-linkedin-summary';
@@ -233,5 +234,9 @@ export default function LinkedInOptimizerPage() {
         </div>
     );
 }
+
+    
+
+    
 
     
