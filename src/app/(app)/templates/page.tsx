@@ -56,21 +56,28 @@ const prices = ['All', 'Free', 'Premium'];
 function TemplatePreviewCard({ template, resumeData, onSelectTemplate }: { template: typeof templates[0], resumeData: any, onSelectTemplate: (template: string) => void }) {
     const TemplateComponent = templateComponents[template.component];
     const containerRef = useRef<HTMLDivElement>(null);
-    const [scale, setScale] = useState(0.25);
+    const [scale, setScale] = useState(1);
 
     useEffect(() => {
-        if (containerRef.current) {
-            const containerWidth = containerRef.current.offsetWidth;
-            const resumeWidth = 210 * 3.77; // A4 width in mm to px approx
-            setScale(containerWidth / resumeWidth);
+        function updateScale() {
+            if (containerRef.current) {
+                const containerWidth = containerRef.current.offsetWidth;
+                // A4 width is 210mm. Assuming 96 DPI, this is ~794px.
+                // We calculate scale based on container width.
+                const resumeWidth = 794; 
+                setScale(containerWidth / resumeWidth);
+            }
         }
-    }, [containerRef]);
+        updateScale();
+        window.addEventListener('resize', updateScale);
+        return () => window.removeEventListener('resize', updateScale);
+    }, []);
 
     return (
         <Card className="group overflow-hidden">
             <CardHeader className="p-0 relative">
-                 <div ref={containerRef} className="aspect-[3/4] bg-muted flex items-center justify-center overflow-hidden">
-                   <div className="w-[210mm] h-[297mm] transform origin-top-left bg-white" style={{ transform: `scale(${scale})` }}>
+                 <div ref={containerRef} className="aspect-[210/297] bg-muted flex items-center justify-center overflow-hidden">
+                   <div className="bg-white shadow-lg" style={{ width: '210mm', height: '297mm', transform: `scale(${scale})`, transformOrigin: 'top left' }}>
                         <TemplateComponent data={resumeData} />
                     </div>
                 </div>
