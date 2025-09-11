@@ -1,13 +1,23 @@
 
+'use client';
+
+import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Activity, ArrowUpRight, Bot, Copy, FilePlus, FileText, Filter, Linkedin, Search, Send, Star, Trash2, TrendingUp } from "lucide-react";
+import { Activity, ArrowUpRight, Bot, Copy, FilePlus, FileText, Filter, Linkedin, Search, Send, Star, Trash2, TrendingUp, Loader2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { auth } from '@/lib/firebase';
+import { db } from '@/lib/firebase-db';
+import { collection, getDocs, onSnapshot } from 'firebase/firestore';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import type { ResumeData } from '@/types/resume';
+import { useToast } from '@/hooks/use-toast';
+
 
 const quickStats = [
   { title: "Resumes Created", value: "5", icon: <FileText className="h-6 w-6 text-muted-foreground" /> },
@@ -25,12 +35,6 @@ const quickActions = [
     { title: "Analytics", description: "View success metrics", icon: <TrendingUp className="h-8 w-8 text-primary" />, href: "/dashboard" },
 ];
 
-const resumes = [
-  { id: "1", name: "Software Dev Resume", atsScore: 92, modified: "2d ago" },
-  { id: "2", name: "Data Analyst Resume", atsScore: 78, modified: "1w ago" },
-  { id: "3", name: "Product Mgr Resume", atsScore: 85, modified: "3d ago" },
-];
-
 const recentActivities = [
     { text: "Software Dev Resume analyzed - ATS Score: 92%", icon: <Bot className="h-5 w-5 text-primary" /> },
     { text: "Data Analyst Resume exported to PDF", icon: <Send className="h-5 w-5 text-primary" /> },
@@ -38,13 +42,64 @@ const recentActivities = [
     { text: "Job match found: Senior Developer at TechCorp", icon: <TrendingUp className="h-5 w-5 text-primary" /> },
 ];
 
+
+interface ResumeRecord {
+  id: string;
+  data: ResumeData;
+  atsScore?: number;
+  modified: string;
+}
+
+
 export default function DashboardPage() {
+    const [user, setUser] = useState<User | null>(null);
+    const [resumes, setResumes] = useState<ResumeRecord[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const { toast } = useToast();
+
+    useEffect(() => {
+        const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+            if (!currentUser) {
+                setIsLoading(false);
+                setResumes([]);
+            }
+        });
+        return () => unsubscribeAuth();
+    }, []);
+
+    useEffect(() => {
+        if (!user) return;
+
+        setIsLoading(true);
+        const resumesCollection = collection(db, `users/${user.uid}/resumes`);
+        
+        const unsubscribeFirestore = onSnapshot(resumesCollection, (querySnapshot) => {
+            const fetchedResumes = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                data: doc.data() as ResumeData,
+                atsScore: Math.floor(Math.random() * 30) + 70, // Placeholder score
+                modified: "2d ago", // Placeholder date
+            }));
+            setResumes(fetchedResumes);
+            setIsLoading(false);
+        }, (error) => {
+            console.error("Error fetching resumes: ", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch resumes.' });
+            setIsLoading(false);
+        });
+
+        return () => unsubscribeFirestore();
+
+    }, [user, toast]);
+
+
   return (
     <div className="flex-1 space-y-8 p-4 md:p-8">
         <div className="flex items-center justify-between space-y-2">
             <div>
                 <h1 className="text-3xl font-bold font-headline tracking-tight">Dashboard</h1>
-                <p className="text-muted-foreground">Welcome back, John! 👋 Ready to optimize your job search?</p>
+                <p className="text-muted-foreground">Welcome back, {user?.displayName || 'User'}! 👋 Ready to optimize your job search?</p>
             </div>
         </div>
 
@@ -100,34 +155,49 @@ export default function DashboardPage() {
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {resumes.map((resume) => (
-                        <Card key={resume.id} className="group">
-                            <CardHeader className="p-0">
-                                <div className="aspect-[3/4] bg-muted rounded-t-md flex items-center justify-center p-4 relative">
-                                    <Image src={`https://picsum.photos/300/400?random=${resume.id}`} width={300} height={400} alt={resume.name} className="rounded-md object-cover" data-ai-hint="resume preview" />
-                                    <Button asChild variant="secondary" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <Link href={`/builder/${resume.id}`}>Preview</Link>
-                                    </Button>
-                                </div>
-                            </CardHeader>
-                            <CardContent className="p-4 space-y-2">
-                                <CardTitle className="text-base">{resume.name}</CardTitle>
-                                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                                    <span>ATS: <span className={resume.atsScore > 85 ? 'text-green-500' : resume.atsScore > 75 ? 'text-yellow-500' : 'text-red-500'}>{resume.atsScore}%</span></span>
-                                    <span>Modified: {resume.modified}</span>
-                                </div>
-                            </CardContent>
-                            <CardFooter className="p-2 pt-0 grid grid-cols-2 gap-2">
-                                <Button asChild size="sm">
-                                    <Link href={`/builder/${resume.id}`}>Edit</Link>
+                    <CardContent>
+                         {isLoading ? (
+                            <div className="flex justify-center items-center h-40">
+                                <Loader2 className="h-8 w-8 animate-spin" />
+                            </div>
+                        ) : resumes.length === 0 ? (
+                            <div className="text-center py-10">
+                                <p className="text-muted-foreground mb-4">You haven't created any resumes yet.</p>
+                                <Button asChild>
+                                    <Link href="/builder/new">Create Your First Resume</Link>
                                 </Button>
-                                <Button variant="outline" size="sm"><Send className="h-4 w-4 mr-2" /> Share</Button>
-                                <Button variant="ghost" size="sm"><Copy className="h-4 w-4 mr-2" /> Copy</Button>
-                                <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-500 hover:bg-red-500/10"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
-                            </CardFooter>
-                        </Card>
-                        ))}
+                            </div>
+                        ) : (
+                            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {resumes.map((resume) => (
+                                <Card key={resume.id} className="group">
+                                    <CardHeader className="p-0">
+                                        <div className="aspect-[3/4] bg-muted rounded-t-md flex items-center justify-center p-4 relative">
+                                            <Image src={`https://picsum.photos/300/400?random=${resume.id}`} width={300} height={400} alt={resume.id} className="rounded-md object-cover" data-ai-hint="resume preview" />
+                                            <Button asChild variant="secondary" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <Link href={`/builder/${resume.id}`}>Preview</Link>
+                                            </Button>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="p-4 space-y-2">
+                                        <CardTitle className="text-base truncate">{resume.id}</CardTitle>
+                                        <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                            <span>ATS: <span className={resume.atsScore && resume.atsScore > 85 ? 'text-green-500' : resume.atsScore && resume.atsScore > 75 ? 'text-yellow-500' : 'text-red-500'}>{resume.atsScore || 'N/A'}%</span></span>
+                                            <span>Modified: {resume.modified}</span>
+                                        </div>
+                                    </CardContent>
+                                    <CardFooter className="p-2 pt-0 grid grid-cols-2 gap-2">
+                                        <Button asChild size="sm">
+                                            <Link href={`/builder/${resume.id}`}>Edit</Link>
+                                        </Button>
+                                        <Button variant="outline" size="sm"><Send className="h-4 w-4 mr-2" /> Share</Button>
+                                        <Button variant="ghost" size="sm"><Copy className="h-4 w-4 mr-2" /> Copy</Button>
+                                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-500 hover:bg-red-500/10"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
+                                    </CardFooter>
+                                </Card>
+                                ))}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
