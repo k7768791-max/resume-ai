@@ -13,7 +13,6 @@ import { ExportButton } from "@/components/builder/ExportButton";
 import { useEffect, useState } from "react";
 import { optimizeResumeContent } from "@/ai/flows/optimize-resume-content";
 import { useToast } from "@/hooks/use-toast";
-import { getResumeText } from "@/lib/get-resume-text";
 
 
 function BuilderPageContent({ resumeId }: { resumeId: string }) {
@@ -22,20 +21,17 @@ function BuilderPageContent({ resumeId }: { resumeId: string }) {
     const { toast } = useToast();
 
     useEffect(() => {
-        loadResume(resumeId);
+        if (resumeId) {
+            loadResume(resumeId);
+        }
     }, [resumeId, loadResume]);
 
     const handleOptimizeResume = async () => {
         setIsOptimizing(true);
         toast({ title: "Optimizing...", description: "AI is enhancing your resume. This may take a moment." });
         try {
-            const resumeText = getResumeText(resumeData);
-            const result = await optimizeResumeContent({ resumeSection: resumeText });
-            
-            // A simple way to update summary. A more robust solution might involve parsing the whole text.
-            const newSummary = result.optimizedContent.split('\n\n')[0];
-            setResumeData(prev => ({ ...prev, summary: newSummary }));
-
+            const result = await optimizeResumeContent({ resumeData });
+            setResumeData(result);
             toast({ title: "Success!", description: "Your resume has been optimized." });
         } catch (error) {
             console.error("Error optimizing resume:", error);
@@ -95,5 +91,3 @@ export default function BuilderPage({ params }: { params: { id: string } }) {
         </ResumeProvider>
     );
 }
-
-    
