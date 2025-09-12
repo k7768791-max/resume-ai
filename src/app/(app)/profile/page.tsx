@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookUser, CreditCard, Edit, Settings, Shield, UserCog, Loader2, Download, Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "lucide-react";
+import { BookUser, CreditCard, Edit, Settings, Shield, UserCog, Loader2, Download, Table as TableIcon } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -305,4 +306,4 @@ export default function ProfilePage() {
     );
 }
 
-    
+  
