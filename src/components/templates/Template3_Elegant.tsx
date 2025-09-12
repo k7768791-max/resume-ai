@@ -66,7 +66,7 @@ export function Template3_Elegant({ data }: { data: ResumeData }) {
                 <section className="mb-6">
                     <h2 className="text-center text-sm font-bold tracking-widest uppercase text-gray-500 mb-3">Certifications</h2>
                     <div className="text-center text-sm">
-                        {certifications.map(cert => <p key={cert}>{cert}</p>)}
+                        {certifications.map((cert, index) => <p key={`cert-${index}`}>{cert}</p>)}
                     </div>
                 </section>
             )}
@@ -75,7 +75,7 @@ export function Template3_Elegant({ data }: { data: ResumeData }) {
                 <section className="mb-6">
                     <h2 className="text-center text-sm font-bold tracking-widest uppercase text-gray-500 mb-3">Awards</h2>
                     <div className="text-center text-sm">
-                        {extras.awards.map(award => <p key={award}>{award}</p>)}
+                        {extras.awards.map((award, index) => <p key={`award-${index}`}>{award}</p>)}
                     </div>
                 </section>
             )}

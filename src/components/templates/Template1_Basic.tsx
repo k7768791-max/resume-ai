@@ -67,7 +67,7 @@ export function Template1_Basic({ data }: { data: ResumeData }) {
                 <section className="mb-4">
                     <h2 className="text-lg font-bold border-b-2 border-gray-300 pb-1 mb-2">CERTIFICATIONS</h2>
                     <ul className="list-disc list-inside">
-                        {certifications.map(cert => <li key={cert}>{cert}</li>)}
+                        {certifications.map((cert, index) => <li key={`cert-${index}`}>{cert}</li>)}
                     </ul>
                 </section>
             )}
@@ -76,7 +76,7 @@ export function Template1_Basic({ data }: { data: ResumeData }) {
                 <section className="mb-4">
                     <h2 className="text-lg font-bold border-b-2 border-gray-300 pb-1 mb-2">AWARDS</h2>
                     <ul className="list-disc list-inside">
-                        {extras.awards.map(award => <li key={award}>{award}</li>)}
+                        {extras.awards.map((award, index) => <li key={`award-${index}`}>{award}</li>)}
                     </ul>
                 </section>
             )}

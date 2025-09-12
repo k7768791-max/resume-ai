@@ -66,7 +66,7 @@ export function Template4_Corporate({ data }: { data: ResumeData }) {
                 <section className="mb-6">
                     <h2 className="text-base font-extrabold text-blue-900 border-b-2 border-blue-200 pb-1 mb-2">CERTIFICATIONS</h2>
                     <ul className="list-disc list-inside">
-                        {certifications.map(c => <li key={c}>{c}</li>)}
+                        {certifications.map((c, index) => <li key={`cert-${index}`}>{c}</li>)}
                     </ul>
                 </section>
             )}
@@ -75,7 +75,7 @@ export function Template4_Corporate({ data }: { data: ResumeData }) {
                 <section className="mb-6">
                     <h2 className="text-base font-extrabold text-blue-900 border-b-2 border-blue-200 pb-1 mb-2">AWARDS</h2>
                     <ul className="list-disc list-inside">
-                        {extras.awards.map(award => <li key={award}>{award}</li>)}
+                        {extras.awards.map((award, index) => <li key={`award-${index}`}>{award}</li>)}
                     </ul>
                 </section>
             )}

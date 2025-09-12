@@ -69,7 +69,7 @@ export function Template10_Simple({ data }: { data: ResumeData }) {
                     <p className="font-bold text-sm uppercase tracking-wider">Certifications</p>
                     <hr className="border-black my-1"/>
                     {certifications.map((cert, index) => (
-                        <p key={index} className="my-1">{cert}</p>
+                        <p key={`cert-${index}`} className="my-1">{cert}</p>
                     ))}
                 </>
             )}
@@ -80,7 +80,7 @@ export function Template10_Simple({ data }: { data: ResumeData }) {
                     <p className="font-bold text-sm uppercase tracking-wider">Awards</p>
                     <hr className="border-black my-1"/>
                     {extras.awards.map((award, index) => (
-                        <p key={index} className="my-1">{award}</p>
+                        <p key={`award-${index}`} className="my-1">{award}</p>
                     ))}
                 </>
             )}

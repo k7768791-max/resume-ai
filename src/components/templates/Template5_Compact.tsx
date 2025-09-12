@@ -63,7 +63,7 @@ export function Template5_Compact({ data }: { data: ResumeData }) {
                  <section className="mb-3">
                     <h2 className="font-bold text-center text-sm uppercase tracking-wider bg-gray-100 py-1">Certifications</h2>
                     <ul className="list-disc list-inside mt-1 p-1">
-                        {certifications.map(cert => <li key={cert}>{cert}</li>)}
+                        {certifications.map((cert, index) => <li key={`cert-${index}`}>{cert}</li>)}
                     </ul>
                 </section>
             )}
@@ -72,7 +72,7 @@ export function Template5_Compact({ data }: { data: ResumeData }) {
                 <section className="mb-3">
                     <h2 className="font-bold text-center text-sm uppercase tracking-wider bg-gray-100 py-1">Awards</h2>
                     <ul className="list-disc list-inside mt-1 p-1">
-                        {extras.awards.map(award => <li key={award}>{award}</li>)}
+                        {extras.awards.map((award, index) => <li key={`award-${index}`}>{award}</li>)}
                     </ul>
                 </section>
             )}

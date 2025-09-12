@@ -63,7 +63,7 @@ export function Template7_BoldHeader({ data }: { data: ResumeData }) {
                 <section className="mb-4 px-6">
                     <h2 className="text-xl font-bold border-b-2 border-gray-700 text-gray-800 pb-1 mb-2">CERTIFICATIONS</h2>
                     <ul className="list-disc list-inside text-sm">
-                        {certifications.map(cert => <li key={cert}>{cert}</li>)}
+                        {certifications.map((cert, index) => <li key={`cert-${index}`}>{cert}</li>)}
                     </ul>
                 </section>
             )}
@@ -72,7 +72,7 @@ export function Template7_BoldHeader({ data }: { data: ResumeData }) {
                 <section className="mb-4 px-6">
                     <h2 className="text-xl font-bold border-b-2 border-gray-700 text-gray-800 pb-1 mb-2">AWARDS</h2>
                     <ul className="list-disc list-inside text-sm">
-                        {extras.awards.map(award => <li key={award}>{award}</li>)}
+                        {extras.awards.map((award, index) => <li key={`award-${index}`}>{award}</li>)}
                     </ul>
                 </section>
             )}

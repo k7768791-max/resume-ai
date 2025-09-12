@@ -70,7 +70,7 @@ export function Template2_Modern({ data }: { data: ResumeData }) {
                 <section className="mb-5">
                     <h2 className="text-purple-800 font-bold text-sm tracking-widest uppercase mb-2">Certifications</h2>
                     <ul className="list-disc list-inside text-sm">
-                        {certifications.map(cert => <li key={cert}>{cert}</li>)}
+                        {certifications.map((cert, index) => <li key={`cert-${index}`}>{cert}</li>)}
                     </ul>
                 </section>
             )}
@@ -79,7 +79,7 @@ export function Template2_Modern({ data }: { data: ResumeData }) {
                 <section className="mb-5">
                     <h2 className="text-purple-800 font-bold text-sm tracking-widest uppercase mb-2">Awards</h2>
                     <ul className="list-disc list-inside text-sm">
-                        {extras.awards.map(award => <li key={award}>{award}</li>)}
+                        {extras.awards.map((award, index) => <li key={`award-${index}`}>{award}</li>)}
                     </ul>
                 </section>
             )}
