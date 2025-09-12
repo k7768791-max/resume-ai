@@ -25,12 +25,13 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  experimental: {
-    turbo: {
-      resolveAliases: {
-        canvas: 'false',
-      },
-    },
+  webpack: (config, { isServer }) => {
+    // This is the correct way to alias modules with Turbopack and Webpack
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      canvas: false,
+    };
+    return config;
   },
 };
 
