@@ -23,6 +23,7 @@ const ResumeDataSchema = z.object({
     location: z.string(),
     linkedin: z.string().optional(),
     github: z.string().optional(),
+    portfolio: z.string().optional(),
   }),
   summary: z.string(),
   skills: z.object({
@@ -33,6 +34,7 @@ const ResumeDataSchema = z.object({
     z.object({
       title: z.string(),
       company: z.string(),
+      location: z.string().optional(),
       description: z.string(),
       startDate: z.string(),
       endDate: z.string(),
@@ -43,6 +45,7 @@ const ResumeDataSchema = z.object({
       name: z.string(),
       techStack: z.string(),
       description: z.string(),
+      link: z.string().optional(),
     })
   ),
   education: z.array(
@@ -55,6 +58,15 @@ const ResumeDataSchema = z.object({
     })
   ),
   certifications: z.array(z.string()).optional(),
+  volunteer: z.array(
+    z.object({
+      organization: z.string(),
+      role: z.string(),
+      startDate: z.string(),
+      endDate: z.string(),
+      description: z.string(),
+    })
+  ).optional(),
   extras: z.object({
       languages: z.array(z.string()).optional(),
       interests: z.array(z.string()).optional(),
@@ -95,21 +107,23 @@ const prompt = ai.definePrompt({
   output: {
     schema: ResumeDataSchema,
   },
-  prompt: `You are a resume optimization expert. Your task is to improve the provided resume JSON.
-Rewrite the content to be more professional and impactful. Use stronger action verbs and quantify achievements where possible based on the existing text.
-You must only work with the information already present in the resume. **Do NOT add any new skills, experiences, or facts.**
-Ensure all original sections and data points (names, dates, companies) are preserved.
-Return a complete JSON object in the exact same structure as the input.
+  prompt: `You are an expert resume editor. Your task is to rewrite and enhance the provided resume JSON to be more professional and ATS-friendly.
 
-Resume Data:
+Rules:
+1.  **Rewrite Content**: Use stronger action verbs and quantify achievements where possible based on the existing text. Make the content more impactful.
+2.  **Do Not Add New Information**: You must only work with the information already present in the resume. **Do NOT add any new skills, experiences, facts, or fabricate any details.**
+3.  **Preserve Structure**: Ensure all original data points (names, dates, companies, etc.) are preserved. Return a complete JSON object in the exact same structure as the input.
+4.  **Tailor if Provided**: If a job description is included, tailor the rewritten content to better align with its keywords and requirements.
+
+Resume Data to Optimize:
 {{{json resumeData}}}
 
 {{#if jobDescription}}
-Tailor the content to better align with this job description:
+Job Description for Tailoring:
 {{{jobDescription}}}
 {{/if}}
 
-Return the full, optimized resume as a valid JSON object.
+Return the full, rewritten resume as a single, valid JSON object that strictly follows the output schema.
 `,
 });
 
