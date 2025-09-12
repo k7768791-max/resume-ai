@@ -13,7 +13,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { auth } from '@/lib/firebase';
 import { db } from '@/lib/firebase-db';
-import { collection, getDocs, onSnapshot } from 'firebase/firestore';
+import { collection, getDocs, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import type { ResumeData } from '@/types/resume';
 import { useToast } from '@/hooks/use-toast';
@@ -92,6 +92,19 @@ export default function DashboardPage() {
         return () => unsubscribeFirestore();
 
     }, [user, toast]);
+
+    const deleteResume = async (resumeId: string) => {
+        if (!user) return;
+        if (!confirm(`Are you sure you want to delete "${resumeId}"?`)) return;
+
+        try {
+            await deleteDoc(doc(db, `users/${user.uid}/resumes`, resumeId));
+            toast({ title: "Success", description: `Resume "${resumeId}" deleted.` });
+        } catch (error) {
+            console.error("Error deleting resume: ", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete resume.' });
+        }
+    };
 
 
   return (
@@ -173,7 +186,7 @@ export default function DashboardPage() {
                                 <Card key={resume.id} className="group">
                                     <CardHeader className="p-0">
                                         <div className="aspect-[3/4] bg-muted rounded-t-md flex items-center justify-center p-4 relative">
-                                            <Image src={`https://picsum.photos/300/400?random=${resume.id}`} width={300} height={400} alt={resume.id} className="rounded-md object-cover" data-ai-hint="resume preview" />
+                                            <Image src={`https://picsum.photos/seed/${resume.id}/300/400`} width={300} height={400} alt={resume.id} className="rounded-md object-cover" data-ai-hint="resume preview" />
                                             <Button asChild variant="secondary" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <Link href={`/builder/${resume.id}`}>Preview</Link>
                                             </Button>
@@ -192,7 +205,7 @@ export default function DashboardPage() {
                                         </Button>
                                         <Button variant="outline" size="sm"><Send className="h-4 w-4 mr-2" /> Share</Button>
                                         <Button variant="ghost" size="sm"><Copy className="h-4 w-4 mr-2" /> Copy</Button>
-                                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-500 hover:bg-red-500/10"><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
+                                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-500 hover:bg-red-500/10" onClick={() => deleteResume(resume.id)}><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
                                     </CardFooter>
                                 </Card>
                                 ))}
@@ -223,3 +236,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    

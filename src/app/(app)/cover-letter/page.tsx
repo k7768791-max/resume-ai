@@ -22,16 +22,20 @@ interface ResumeRecord {
 }
 
 const getResumeText = (resumeData: ResumeData) => {
-    return Object.values(resumeData).flat().map(section => {
-        if (typeof section === 'string') return section;
-        if (typeof section === 'object' && section !== null) {
-            if (Array.isArray(section)) {
-                return section.map(item => typeof item === 'object' ? Object.values(item).join(' ') : item).join('\n');
-            }
-            return Object.values(section).join(' ');
-        }
-        return '';
-    }).join('\n\n');
+    // This function now handles potentially undefined fields gracefully.
+    const sections = [
+        resumeData.summary,
+        ...(resumeData.skills?.technical || []),
+        ...(resumeData.skills?.soft || []),
+        ...resumeData.work.map(w => `${w.title} at ${w.company}: ${w.description}`),
+        ...resumeData.projects.map(p => `${p.name}: ${p.description}`),
+        ...resumeData.education.map(e => `${e.degree} from ${e.school}`),
+        ...(resumeData.certifications || []),
+        ...(resumeData.extras?.awards || []),
+        ...(resumeData.extras?.interests || []),
+        ...(resumeData.extras?.languages || []),
+    ];
+    return sections.filter(Boolean).join('\n\n');
 }
 
 export default function CoverLetterPage() {
@@ -131,9 +135,9 @@ export default function CoverLetterPage() {
                     <CardContent className="space-y-4">
                         <div>
                             <Label>Select Resume</Label>
-                            <Select value={selectedResumeId || ''} onValueChange={setSelectedResumeId}>
+                            <Select value={selectedResumeId || ''} onValueChange={setSelectedResumeId} disabled={resumes.length === 0}>
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Choose a resume..." />
+                                    <SelectValue placeholder={isLoading ? "Loading resumes..." : "Choose a resume..."} />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {resumes.map(resume => (
@@ -202,3 +206,5 @@ export default function CoverLetterPage() {
         </div>
     );
 }
+
+    

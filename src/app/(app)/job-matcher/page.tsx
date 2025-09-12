@@ -21,6 +21,24 @@ import { User } from 'firebase/auth';
 interface ResumeRecord {
   id: string;
   data: ResumeData;
+  text: string;
+}
+
+const getResumeText = (resumeData: ResumeData) => {
+    // This function now handles potentially undefined fields gracefully.
+    const sections = [
+        resumeData.summary,
+        ...(resumeData.skills?.technical || []),
+        ...(resumeData.skills?.soft || []),
+        ...resumeData.work.map(w => `${w.title} at ${w.company}: ${w.description}`),
+        ...resumeData.projects.map(p => `${p.name}: ${p.description}`),
+        ...resumeData.education.map(e => `${e.degree} from ${e.school}`),
+        ...(resumeData.certifications || []),
+        ...(resumeData.extras?.awards || []),
+        ...(resumeData.extras?.interests || []),
+        ...(resumeData.extras?.languages || []),
+    ];
+    return sections.filter(Boolean).join('\n\n');
 }
 
 const similarJobs = [
@@ -59,6 +77,7 @@ export default function JobMatcherPage() {
             const fetchedResumes = querySnapshot.docs.map(doc => ({
                 id: doc.id,
                 data: doc.data() as ResumeData,
+                text: getResumeText(doc.data() as ResumeData),
             }));
             setResumes(fetchedResumes);
             if (fetchedResumes.length > 0) {
@@ -92,16 +111,8 @@ export default function JobMatcherPage() {
             return;
         }
 
-        // Basic text conversion from resume data
-        const resumeText = Object.values(selectedResume.data).flat().map(section => {
-            if (typeof section === 'string') return section;
-            if (typeof section === 'object') return Object.values(section).join(' ');
-            return '';
-        }).join('\n\n');
-
-
         try {
-            const result = await analyzeJobMatch({ resumeText, jobDescription });
+            const result = await analyzeJobMatch({ resumeText: selectedResume.text, jobDescription });
             setAnalysisResult(result);
         } catch (error) {
             console.error("Error analyzing job match: ", error);
@@ -252,5 +263,7 @@ export default function JobMatcherPage() {
         </div>
     );
 }
+
+    
 
     

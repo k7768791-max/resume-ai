@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookUser, CreditCard, Edit, Settings, Shield, UserCog, Loader2 } from "lucide-react";
+import { BookUser, CreditCard, Edit, Settings, Shield, UserCog, Loader2, Download, Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "lucide-react";
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
@@ -123,7 +123,7 @@ export default function ProfilePage() {
                 <CardContent className="p-6 flex flex-col md:flex-row items-center gap-6">
                     <div className="relative">
                         <Avatar className="h-24 w-24">
-                            <AvatarImage src={user?.photoURL || "https://picsum.photos/200"} alt="User avatar" data-ai-hint="person headshot" />
+                            <AvatarImage src={user?.photoURL || `https://i.pravatar.cc/150?u=${user?.uid}`} alt="User avatar" data-ai-hint="person headshot" />
                             <AvatarFallback>{profile.fullName.substring(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <Button size="icon" variant="outline" className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full">

@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowRight, CheckCircle, Clipboard, Copy, Edit, FileText, Lightbulb, Linkedin, RefreshCw, Sparkles, Target, Upload, XCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle, Clipboard, Copy, Edit, FileText, Lightbulb, Linkedin, RefreshCw, Sparkles, Target, Upload, XCircle, Loader2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -24,16 +24,20 @@ interface ResumeRecord {
 }
 
 const getResumeText = (resumeData: ResumeData) => {
-    return Object.values(resumeData).flat().map(section => {
-        if (typeof section === 'string') return section;
-        if (typeof section === 'object' && section !== null) {
-            if (Array.isArray(section)) {
-                return section.map(item => typeof item === 'object' ? Object.values(item).join(' ') : item).join('\n');
-            }
-            return Object.values(section).join(' ');
-        }
-        return '';
-    }).join('\n\n');
+    // This function now handles potentially undefined fields gracefully.
+    const sections = [
+        resumeData.summary,
+        ...(resumeData.skills?.technical || []),
+        ...(resumeData.skills?.soft || []),
+        ...resumeData.work.map(w => `${w.title} at ${w.company}: ${w.description}`),
+        ...resumeData.projects.map(p => `${p.name}: ${p.description}`),
+        ...resumeData.education.map(e => `${e.degree} from ${e.school}`),
+        ...(resumeData.certifications || []),
+        ...(resumeData.extras?.awards || []),
+        ...(resumeData.extras?.interests || []),
+        ...(resumeData.extras?.languages || []),
+    ];
+    return sections.filter(Boolean).join('\n\n');
 }
 
 export default function LinkedInOptimizerPage() {
@@ -41,6 +45,7 @@ export default function LinkedInOptimizerPage() {
     const [resumes, setResumes] = useState<ResumeRecord[]>([]);
     const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [isGenerating, setIsGenerating] = useState(false);
     const [generatedSummary, setGeneratedSummary] = useState('');
     const [recommendedSkills, setRecommendedSkills] = useState<string[]>([]);
     const [userProfile, setUserProfile] = useState<{ industry?: string; experienceLevel?: string }>({});
@@ -103,7 +108,7 @@ export default function LinkedInOptimizerPage() {
             return;
         }
 
-        setIsLoading(true);
+        setIsGenerating(true);
         try {
             const [summaryResult, skillsResult] = await Promise.all([
                 generateLinkedInSummary({ resumeText: selectedResume.text }),
@@ -120,7 +125,7 @@ export default function LinkedInOptimizerPage() {
             console.error("Error generating content:", error);
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate LinkedIn content.' });
         } finally {
-            setIsLoading(false);
+            setIsGenerating(false);
         }
     };
     
@@ -143,6 +148,7 @@ export default function LinkedInOptimizerPage() {
                 </CardHeader>
                 <CardContent className="space-y-4">
                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {isLoading && <Loader2 className="h-6 w-6 animate-spin" />}
                         {resumes.map(resume => (
                             <Card 
                                 key={resume.id} 
@@ -159,8 +165,8 @@ export default function LinkedInOptimizerPage() {
                          {resumes.length === 0 && !isLoading && <p className="text-sm text-muted-foreground">No resumes found.</p>}
                     </div>
                      <div className="text-center pt-4">
-                         <Button size="lg" onClick={handleGenerate} disabled={isLoading || !selectedResumeId}>
-                            {isLoading && <RefreshCw className="mr-2 h-4 w-4 animate-spin" />}
+                         <Button size="lg" onClick={handleGenerate} disabled={isGenerating || !selectedResumeId}>
+                            {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             <Sparkles className="mr-2" /> Generate LinkedIn Content
                         </Button>
                     </div>
@@ -234,9 +240,5 @@ export default function LinkedInOptimizerPage() {
         </div>
     );
 }
-
-    
-
-    
 
     

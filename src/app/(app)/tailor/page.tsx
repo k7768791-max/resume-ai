@@ -22,16 +22,20 @@ interface ResumeRecord {
 }
 
 const getResumeText = (resumeData: ResumeData) => {
-    return Object.values(resumeData).flat().map(section => {
-        if (typeof section === 'string') return section;
-        if (typeof section === 'object' && section !== null) {
-            if (Array.isArray(section)) {
-                return section.map(item => typeof item === 'object' ? Object.values(item).join(' ') : item).join('\n');
-            }
-            return Object.values(section).join(' ');
-        }
-        return '';
-    }).join('\n\n');
+    // This function now handles potentially undefined fields gracefully.
+    const sections = [
+        resumeData.summary,
+        ...(resumeData.skills?.technical || []),
+        ...(resumeData.skills?.soft || []),
+        ...resumeData.work.map(w => `${w.title} at ${w.company}: ${w.description}`),
+        ...resumeData.projects.map(p => `${p.name}: ${p.description}`),
+        ...resumeData.education.map(e => `${e.degree} from ${e.school}`),
+        ...(resumeData.certifications || []),
+        ...(resumeData.extras?.awards || []),
+        ...(resumeData.extras?.interests || []),
+        ...(resumeData.extras?.languages || []),
+    ];
+    return sections.filter(Boolean).join('\n\n');
 }
 
 export default function TailorPage() {
@@ -100,15 +104,16 @@ export default function TailorPage() {
 
     setIsLoading(true);
     try {
-      const [tailorOutput, analysisOutput, originalOutput] = await Promise.all([
-        tailorResumeToJobDescription({ resumeText: selectedResume.text, jobDescription }),
-        analyzeJobMatch({ resumeText: selectedResume.text, jobDescription }),
-        analyzeJobMatch({ resumeText: selectedResume.text, jobDescription: '' }),
-      ]);
+      // Analyze tailored resume against job description
+      const tailoredOutput = await tailorResumeToJobDescription({ resumeText: selectedResume.text, jobDescription });
+      const tailoredAnalysis = await analyzeJobMatch({ resumeText: tailoredOutput.tailoredResumeText, jobDescription });
       
-      setTailoredResult(tailorOutput);
-      setAnalysisResult(analysisOutput);
-      setOriginalAnalysis(originalOutput);
+      // Analyze original resume against job description for comparison
+      const originalResumeAnalysis = await analyzeJobMatch({ resumeText: selectedResume.text, jobDescription });
+      
+      setTailoredResult(tailoredOutput);
+      setAnalysisResult(tailoredAnalysis);
+      setOriginalAnalysis(originalResumeAnalysis);
       setIsAnalyzed(true);
 
     } catch (error) {
@@ -184,11 +189,11 @@ export default function TailorPage() {
                                 <FileText className="h-6 w-6 text-primary" />
                                 <div>
                                     <p className="font-semibold">{resume.id}</p>
-                                    <p className="text-sm text-muted-foreground">Last saved resume</p>
                                 </div>
                             </div>
                         </Card>
                     ))}
+                    {isLoading && <Loader2 className="h-6 w-6 animate-spin" />}
                     {resumes.length === 0 && !isLoading && <p className="text-sm text-muted-foreground">No resumes found.</p>}
                 </div>
             </div>
