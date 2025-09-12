@@ -95,19 +95,17 @@ const prompt = ai.definePrompt({
   output: {
     schema: ResumeDataSchema,
   },
-  prompt: `You are a resume optimization expert. Your task is to analyze the provided resume JSON and enhance its content to be more professional, impactful, and ATS-friendly.
-
-Follow these rules strictly:
-1.  **Do NOT add any new skills, experiences, or facts.** You must only work with the information already present in the resume.
-2.  Rewrite descriptions, summaries, and bullet points to use stronger action verbs and quantify achievements where possible based on the existing text.
-3.  Ensure all original sections and data points (names, dates, companies) are preserved.
-4.  Return a complete JSON object in the exact same structure as the input.
+  prompt: `You are a resume optimization expert. Your task is to improve the provided resume JSON.
+Rewrite the content to be more professional and impactful. Use stronger action verbs and quantify achievements where possible based on the existing text.
+You must only work with the information already present in the resume. **Do NOT add any new skills, experiences, or facts.**
+Ensure all original sections and data points (names, dates, companies) are preserved.
+Return a complete JSON object in the exact same structure as the input.
 
 Resume Data:
 {{{json resumeData}}}
 
 {{#if jobDescription}}
-Additionally, tailor the content to better align with the following job description:
+Tailor the content to better align with this job description:
 {{{jobDescription}}}
 {{/if}}
 
