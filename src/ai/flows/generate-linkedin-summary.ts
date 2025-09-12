@@ -20,7 +20,8 @@ const GenerateLinkedInSummaryInputSchema = z.object({
 export type GenerateLinkedInSummaryInput = z.infer<typeof GenerateLinkedInSummaryInputSchema>;
 
 const GenerateLinkedInSummaryOutputSchema = z.object({
-  linkedinSummary: z.string().describe('The generated LinkedIn summary.'),
+  headline: z.string().describe('A compelling, keyword-rich headline for the LinkedIn profile.'),
+  linkedinSummary: z.string().describe('The generated LinkedIn "About" section summary.'),
   progress: z.string().describe('Progress summary of LinkedIn summary generation.'),
 });
 export type GenerateLinkedInSummaryOutput = z.infer<typeof GenerateLinkedInSummaryOutputSchema>;
@@ -33,13 +34,13 @@ const prompt = ai.definePrompt({
   name: 'generateLinkedInSummaryPrompt',
   input: {schema: GenerateLinkedInSummaryInputSchema},
   output: {schema: GenerateLinkedInSummaryOutputSchema},
-  prompt: `You are a professional resume writer specializing in creating compelling LinkedIn summaries.
-  Based on the provided resume text, generate a LinkedIn summary that highlights the user's key skills, experiences, and accomplishments.
-  The summary should be concise, engaging, and tailored to attract recruiters and potential employers.
+  prompt: `You are a professional resume writer and LinkedIn profile optimization expert.
+  Based on the provided resume text, generate two items:
+  1.  A compelling, keyword-rich **headline**. The headline should be concise and grab the attention of recruiters. It should include key skills and the user's primary role.
+  2.  A professional LinkedIn **"About" section summary**. The summary should highlight the user's key skills, experiences, and accomplishments in a narrative format. It should be engaging and tailored to attract recruiters and potential employers.
 
   Resume Text: {{{resumeText}}}
-
-  LinkedIn Summary:`, // Removed JSON formatting request as the output is a string.
+`,
 });
 
 const generateLinkedInSummaryFlow = ai.defineFlow(
@@ -51,8 +52,9 @@ const generateLinkedInSummaryFlow = ai.defineFlow(
   async input => {
     const {output} = await prompt(input);
     return {
+      headline: output!.headline,
       linkedinSummary: output!.linkedinSummary,
-      progress: 'Generated LinkedIn summary based on resume content.',
+      progress: 'Generated LinkedIn headline and summary based on resume content.',
     };
   }
 );

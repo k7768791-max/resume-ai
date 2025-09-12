@@ -5,7 +5,7 @@
  * @fileOverview A Genkit flow for extracting text from various file types.
  *
  * This flow takes a file encoded as a data URI and its MIME type,
- * then extracts the text content from it. It supports DOCX and plain text files.
+ * then extracts the text content from it. It supports DOCX, PDF, and plain text files.
  *
  * - extractTextFromFile - The main function to trigger the text extraction flow.
  * - ExtractTextFromFileInput - The input type for the function.
@@ -15,10 +15,11 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import mammoth from 'mammoth';
+import pdf from 'pdf-parse';
 
 const ExtractTextFromFileInputSchema = z.object({
     fileDataUri: z.string().describe("The file content as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
-    mimeType: z.string().describe("The MIME type of the file (e.g., 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')."),
+    mimeType: z.string().describe("The MIME type of the file (e.g., 'application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')."),
 });
 export type ExtractTextFromFileInput = z.infer<typeof ExtractTextFromFileInputSchema>;
 
@@ -45,10 +46,13 @@ const extractTextFromFileFlow = ai.defineFlow(
     if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         const { value } = await mammoth.extractRawText({ buffer });
         text = value;
+    } else if (mimeType === 'application/pdf') {
+        const data = await pdf(buffer);
+        text = data.text;
     } else if (mimeType.startsWith('text/')) {
         text = buffer.toString('utf-8');
     } else {
-        throw new Error(`Unsupported file type: ${mimeType}. Please use a .docx or .txt file.`);
+        throw new Error(`Unsupported file type: ${mimeType}. Please use a .docx, .pdf, or .txt file.`);
     }
 
     return { text };

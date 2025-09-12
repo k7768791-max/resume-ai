@@ -34,7 +34,7 @@ export default function LinkedInOptimizerPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [generatedSummary, setGeneratedSummary] = useState('');
-    const [generatedTitle, setGeneratedTitle] = useState('');
+    const [generatedHeadline, setGeneratedHeadline] = useState('');
     const [recommendedSkills, setRecommendedSkills] = useState<string[]>([]);
     const [userProfile, setUserProfile] = useState<{ industry?: string; experienceLevel?: string }>({});
     const { toast } = useToast();
@@ -126,7 +126,6 @@ export default function LinkedInOptimizerPage() {
         
         setIsGenerating(true);
         try {
-            // Placeholder for a more complex AI flow that generates all parts
             const [summaryResult, skillsResult] = await Promise.all([
                 generateLinkedInSummary({ resumeText: selectedResumeText }),
                 userProfile.industry && userProfile.experienceLevel 
@@ -135,7 +134,7 @@ export default function LinkedInOptimizerPage() {
             ]);
 
             setGeneratedSummary(summaryResult.linkedinSummary);
-            setGeneratedTitle(`Experienced Software Developer | React, Node.js, TypeScript`); // Placeholder
+            setGeneratedHeadline(summaryResult.headline);
             setRecommendedSkills(skillsResult.recommendedSkills);
             toast({ title: 'Success', description: 'LinkedIn content generated!' });
 
@@ -168,9 +167,9 @@ export default function LinkedInOptimizerPage() {
                      <div className="grid md:grid-cols-2 gap-8">
                         <div className="p-4 border-2 border-dashed rounded-lg text-center">
                             <FileUp className="h-8 w-8 text-muted-foreground mb-2 mx-auto" />
-                            <Button variant="outline" asChild><label className="cursor-pointer">Upload Resume<input type="file" className="sr-only" onChange={handleFileChange} accept=".docx,.txt" /></label></Button>
+                            <Button variant="outline" asChild><label className="cursor-pointer">Upload Resume<input type="file" className="sr-only" onChange={handleFileChange} accept=".docx,.txt,.pdf" /></label></Button>
                             {fileName && <p className="text-sm text-green-500 mt-2">Uploaded: {fileName}</p>}
-                            <p className="text-xs text-muted-foreground mt-1">Supports: DOCX, TXT</p>
+                            <p className="text-xs text-muted-foreground mt-1">Supports: DOCX, PDF, TXT</p>
                         </div>
                          <div className="space-y-2">
                              <h4 className="font-semibold text-center mb-2">Or Select a Saved Resume</h4>
@@ -204,9 +203,9 @@ export default function LinkedInOptimizerPage() {
                             
                              <Card className="p-4 bg-background">
                                 <h3 className="font-semibold mb-2">Generated Headline</h3>
-                                <Textarea value={generatedTitle} rows={2} readOnly />
+                                <Textarea value={generatedHeadline} rows={2} readOnly />
                                 <div className="flex justify-end items-center mt-2">
-                                    <Button variant="secondary" size="sm" onClick={() => copyToClipboard(generatedTitle)}><Copy className="mr-2" /> Copy</Button>
+                                    <Button variant="secondary" size="sm" onClick={() => copyToClipboard(generatedHeadline)}><Copy className="mr-2" /> Copy</Button>
                                 </div>
                             </Card>
 
@@ -261,5 +260,3 @@ export default function LinkedInOptimizerPage() {
         </div>
     );
 }
-
-    
