@@ -38,12 +38,12 @@ export function ResumeForm() {
             ...prev,
             skills: {
                 ...prev.skills,
-                technical: value.split(',').map(s => s.trim()),
+                technical: value.split('\n'),
             }
         }));
     }
 
-    const handleArrayChange = (section: 'certifications', index: number, value: string) => {
+    const handleArrayChange = (section: 'certifications' | 'custom', index: number, value: string) => {
         setResumeData(prev => {
             const list = [...(prev[section] || [])];
             list[index] = value;
@@ -51,7 +51,7 @@ export function ResumeForm() {
         });
     };
     
-    const handleExtrasChange = (field: 'awards' | 'interests', index: number, value: string) => {
+    const handleExtrasChange = (field: 'awards' | 'interests' | 'languages', index: number, value: string) => {
          setResumeData(prev => ({
             ...prev,
             extras: {
@@ -61,22 +61,22 @@ export function ResumeForm() {
         }));
     };
     
-    const addToArray = (section: 'certifications') => {
+    const addToArray = (section: 'certifications' | 'custom') => {
         setResumeData(prev => ({ ...prev, [section]: [...(prev[section] || []), ''] }));
     };
 
-    const removeFromArray = (section: 'certifications', index: number) => {
+    const removeFromArray = (section: 'certifications' | 'custom', index: number) => {
         setResumeData(prev => ({ ...prev, [section]: prev[section]?.filter((_, i) => i !== index) }));
     };
 
-    const addToExtras = (field: 'awards' | 'interests') => {
+    const addToExtras = (field: 'awards' | 'interests' | 'languages') => {
         setResumeData(prev => ({
             ...prev,
             extras: { ...prev.extras, [field]: [...(prev.extras?.[field] || []), ''] }
         }));
     };
     
-    const removeFromExtras = (field: 'awards' | 'interests', index: number) => {
+    const removeFromExtras = (field: 'awards' | 'interests' | 'languages', index: number) => {
          setResumeData(prev => ({
             ...prev,
             extras: { ...prev.extras, [field]: prev.extras?.[field]?.filter((_, i) => i !== index) }
@@ -215,12 +215,12 @@ export function ResumeForm() {
                     <AccordionContent className="p-4 pt-0">
                         <div className="space-y-4">
                             <div>
-                                <Label className="text-xs text-muted-foreground">Technical Skills (use categories like "Frontend: React, ...")</Label>
+                                <Label className="text-xs text-muted-foreground">Technical Skills (enter each category on a new line)</Label>
                                 <Textarea 
-                                    placeholder="Frontend: React, Node.js..." 
+                                    placeholder={"Frontend: React, Redux, TailwindCSS\nBackend: Node.js, Express.js, GraphQL"} 
                                     value={resumeData.skills.technical.join('\n')} 
-                                    onChange={e => setResumeData(prev => ({...prev, skills: { ...prev.skills, technical: e.target.value.split('\n')}}))}
-                                    rows={6}
+                                    onChange={e => handleSkillsChange(e.target.value)}
+                                    rows={8}
                                 />
                             </div>
                         </div>

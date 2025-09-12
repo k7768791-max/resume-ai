@@ -1,4 +1,3 @@
-
 export interface ResumeData {
   personal: {
     fullName: string;
@@ -17,7 +16,7 @@ export interface ResumeData {
     title: string;
     company: string;
     description: string;
-    startDate: string; 
+    startDate: string;
     endDate: string;
   }[];
   projects: {
@@ -38,4 +37,12 @@ export interface ResumeData {
     interests?: string[];
     awards?: string[];
   };
+  // Adding a flexible custom section
+  custom?: {
+      title: string;
+      items: {
+          name: string;
+          description: string;
+      }[];
+  }[];
 }
