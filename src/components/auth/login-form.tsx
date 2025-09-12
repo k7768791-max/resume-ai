@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -12,8 +13,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 
@@ -66,6 +67,26 @@ export function LoginForm() {
             setIsLoading(false);
         }
     }
+    
+    const handleGoogleSignIn = async () => {
+        setIsLoading(true);
+        try {
+            await signInWithPopup(auth, googleProvider);
+            toast({
+                title: "Success!",
+                description: "You've been logged in successfully.",
+            });
+            router.push('/dashboard');
+        } catch (error: any) {
+             toast({
+                variant: "destructive",
+                title: "Login Failed",
+                description: error.message,
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
   return (
     <Card className="w-full max-w-md">
@@ -121,7 +142,7 @@ export function LoginForm() {
                     <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-sm text-muted-foreground">or</span>
                 </div>
                 <div className='w-full grid grid-cols-1 sm:grid-cols-2 gap-2'>
-                    <Button variant="outline" className="w-full" type="button">
+                    <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn}>
                         <GoogleIcon className="mr-2 h-5 w-5" />
                         Continue with Google
                     </Button>
