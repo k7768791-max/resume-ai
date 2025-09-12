@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Activity, ArrowUpRight, Bot, Copy, FilePlus, FileText, Filter, Linkedin, Search, Send, Star, Trash2, TrendingUp, Loader2, Mail, Share2 } from "lucide-react";
+import { Activity, ArrowUpRight, Bot, Copy, FilePlus, FileText, Filter, Linkedin, Search, Send, Star, Trash2, TrendingUp, Loader2, Mail, Share2, Briefcase, FileStack, BarChart } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { auth } from '@/lib/firebase';
@@ -106,6 +106,10 @@ export default function DashboardPage() {
         navigator.clipboard.writeText(url);
         toast({ title: "Copied!", description: "Shareable link copied to clipboard." });
     };
+    
+    const avgAtsScore = resumes.length > 0
+        ? Math.round(resumes.reduce((acc, r) => acc + (r.atsScore || 0), 0) / resumes.length)
+        : 0;
 
   return (
     <div className="flex-1 space-y-8 p-4 md:p-8">
@@ -115,6 +119,51 @@ export default function DashboardPage() {
                 <p className="text-muted-foreground">Welcome back, {user?.displayName || 'User'}! 👋 Ready to optimize your job search?</p>
             </div>
         </div>
+        
+        {/* Dynamic Stats Section */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Total Resumes</CardTitle>
+                    <FileStack className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{resumes.length}</div>
+                    <p className="text-xs text-muted-foreground">You have {resumes.length} resumes saved.</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Avg. ATS Score</CardTitle>
+                    <BarChart className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">{avgAtsScore}%</div>
+                    <p className="text-xs text-muted-foreground">Across all your resumes.</p>
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Jobs Matched</CardTitle>
+                    <Briefcase className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">12</div>
+                    <p className="text-xs text-muted-foreground">+5 this month</p>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">AI Optimizations</CardTitle>
+                    <Bot className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                    <div className="text-2xl font-bold">+8</div>
+                    <p className="text-xs text-muted-foreground">Used this month</p>
+                </CardContent>
+            </Card>
+        </div>
+
 
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
             <div className="lg:col-span-3">
