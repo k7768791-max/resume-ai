@@ -6,6 +6,7 @@ export interface ResumeData {
     location: string;
     linkedin?: string;
     github?: string;
+    portfolio?: string;
   };
   summary: string;
   skills: {
@@ -15,6 +16,7 @@ export interface ResumeData {
   work: {
     title: string;
     company: string;
+    location?: string;
     description: string;
     startDate: string;
     endDate: string;
@@ -23,6 +25,7 @@ export interface ResumeData {
     name: string;
     techStack: string;
     description: string;
+    link?: string;
   }[];
   education: {
     school: string;
@@ -32,6 +35,13 @@ export interface ResumeData {
     gpa?: string;
   }[];
   certifications?: string[];
+  volunteer?: {
+    organization: string;
+    role: string;
+    startDate: string;
+    endDate: string;
+    description: string;
+  }[];
   extras?: {
     languages?: string[];
     interests?: string[];
