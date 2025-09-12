@@ -4,20 +4,46 @@
 import { ResumeForm } from "@/components/builder/resume-form";
 import { ResumePreview } from "@/components/builder/resume-preview";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { ResumeProvider, useResume } from '@/context/ResumeContext';
 import { TemplateSwitcher } from "@/components/builder/TemplateSwitcher";
 import { SaveButton } from "@/components/builder/SaveButton";
 import { ExportButton } from "@/components/builder/ExportButton";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { optimizeResumeContent } from "@/ai/flows/optimize-resume-content";
+import { useToast } from "@/hooks/use-toast";
+import { getResumeText } from "@/lib/get-resume-text";
+
 
 function BuilderPageContent({ resumeId }: { resumeId: string }) {
-    const { loadResume, isLoading } = useResume();
+    const { loadResume, isLoading, resumeData, setResumeData } = useResume();
+    const [isOptimizing, setIsOptimizing] = useState(false);
+    const { toast } = useToast();
 
     useEffect(() => {
         loadResume(resumeId);
     }, [resumeId, loadResume]);
+
+    const handleOptimizeResume = async () => {
+        setIsOptimizing(true);
+        toast({ title: "Optimizing...", description: "AI is enhancing your resume. This may take a moment." });
+        try {
+            const resumeText = getResumeText(resumeData);
+            const result = await optimizeResumeContent({ resumeSection: resumeText });
+            
+            // A simple way to update summary. A more robust solution might involve parsing the whole text.
+            const newSummary = result.optimizedContent.split('\n\n')[0];
+            setResumeData(prev => ({ ...prev, summary: newSummary }));
+
+            toast({ title: "Success!", description: "Your resume has been optimized." });
+        } catch (error) {
+            console.error("Error optimizing resume:", error);
+            toast({ variant: 'destructive', title: "Optimization Failed", description: "Could not optimize the resume." });
+        } finally {
+            setIsOptimizing(false);
+        }
+    };
 
     if (isLoading) {
         return (
@@ -41,6 +67,10 @@ function BuilderPageContent({ resumeId }: { resumeId: string }) {
                     <TemplateSwitcher />
                 </div>
                 <div className="flex items-center gap-2">
+                     <Button onClick={handleOptimizeResume} disabled={isOptimizing} variant="outline">
+                        {isOptimizing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                        Optimize
+                    </Button>
                     <SaveButton resumeId={resumeId} />
                     <ExportButton />
                 </div>
@@ -65,3 +95,5 @@ export default function BuilderPage({ params }: { params: { id: string } }) {
         </ResumeProvider>
     );
 }
+
+    

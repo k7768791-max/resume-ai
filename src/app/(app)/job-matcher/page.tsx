@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowRight, BookOpen, CheckCircle, Circle, Copy, Eye, FileText, Heart, Lightbulb, Loader2, MapPin, Milestone, Search, Sparkles, Target, Wallet, XCircle } from 'lucide-react';
+import { ArrowRight, BookOpen, CheckCircle, Circle, Copy, Eye, FileText, Heart, Lightbulb, Loader2, MapPin, Milestone, Search, Sparkles, Target, Wallet, XCircle, FileUp } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -17,6 +17,9 @@ import { collection, getDocs } from 'firebase/firestore';
 import type { ResumeData } from '@/types/resume';
 import { onAuthStateChanged } from 'firebase/auth';
 import { User } from 'firebase/auth';
+import { getResumeText } from '@/lib/get-resume-text';
+import { extractTextFromFile } from '@/ai/flows/extract-text-from-file';
+import { Label } from '@/components/ui/label';
 
 interface ResumeRecord {
   id: string;
@@ -24,37 +27,15 @@ interface ResumeRecord {
   text: string;
 }
 
-const getResumeText = (resumeData: ResumeData) => {
-    // This function now handles potentially undefined fields gracefully.
-    const sections = [
-        resumeData.summary,
-        ...(resumeData.skills?.technical || []),
-        ...(resumeData.skills?.soft || []),
-        ...resumeData.work.map(w => `${w.title} at ${w.company}: ${w.description}`),
-        ...resumeData.projects.map(p => `${p.name}: ${p.description}`),
-        ...resumeData.education.map(e => `${e.degree} from ${e.school}`),
-        ...(resumeData.certifications || []),
-        ...(resumeData.extras?.awards || []),
-        ...(resumeData.extras?.interests || []),
-        ...(resumeData.extras?.languages || []),
-    ];
-    return sections.filter(Boolean).join('\n\n');
-}
-
-const similarJobs = [
-    { title: 'Full Stack Developer', company: 'StartupXYZ', location: 'Remote', salary: '$110k-$140k', match: 92, details: 'React, Node.js, AWS - Perfect skill alignment' },
-    { title: 'Senior React Developer', company: 'FinTech Pro', location: 'New York', salary: '$125k-$160k', match: 89, details: 'React, GraphQL, TypeScript - Great growth opportunity' },
-    { title: 'Lead Software Engineer', company: 'TechGiant', location: 'Seattle', salary: '$140k-$180k', match: 85, details: 'Leadership role, microservices, cloud architecture' },
-]
-
 export default function JobMatcherPage() {
     const [user, setUser] = useState<User | null>(null);
     const [resumes, setResumes] = useState<ResumeRecord[]>([]);
-    const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+    const [selectedResumeText, setSelectedResumeText] = useState<string | null>(null);
     const [jobDescription, setJobDescription] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [analysisResult, setAnalysisResult] = useState<AnalyzeJobMatchOutput | null>(null);
-
+    const [fileName, setFileName] = useState('');
+    const [selectedSource, setSelectedSource] = useState<string | null>(null);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -81,19 +62,56 @@ export default function JobMatcherPage() {
             }));
             setResumes(fetchedResumes);
             if (fetchedResumes.length > 0) {
-                setSelectedResumeId(fetchedResumes[0].id);
+                setSelectedSource(fetchedResumes[0].id);
+                setSelectedResumeText(fetchedResumes[0].text);
             }
         } catch (error) {
-            console.error("Error fetching resumes: ", error);
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch your resumes.' });
         } finally {
             setIsLoading(false);
         }
     };
+    
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setIsLoading(true);
+            setFileName(file.name);
+            try {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const dataUri = e.target?.result as string;
+                    try {
+                        const result = await extractTextFromFile({ fileDataUri: dataUri, mimeType: file.type });
+                        setSelectedResumeText(result.text);
+                        setSelectedSource('uploaded');
+                        toast({ title: "Success", description: "Resume text extracted." });
+                    } catch (error) {
+                        toast({ variant: "destructive", title: "Error", description: (error as Error).message });
+                    } finally {
+                        setIsLoading(false);
+                    }
+                };
+                reader.readAsDataURL(file);
+            } catch (err) {
+                 toast({ variant: "destructive", title: "Error", description: "Could not read file."});
+                 setIsLoading(false);
+            }
+        }
+    };
+    
+    const handleSelectResume = (id: string) => {
+        const resume = resumes.find(r => r.id === id);
+        if (resume) {
+            setSelectedResumeText(resume.text);
+            setSelectedSource(id);
+            setFileName('');
+        }
+    };
 
     const handleAnalyze = async () => {
-        if (!selectedResumeId) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Please select a resume.' });
+        if (!selectedResumeText) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please select or upload a resume.' });
             return;
         }
         if (!jobDescription) {
@@ -104,15 +122,8 @@ export default function JobMatcherPage() {
         setIsLoading(true);
         setAnalysisResult(null);
 
-        const selectedResume = resumes.find(r => r.id === selectedResumeId);
-        if (!selectedResume) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Could not find selected resume.' });
-            setIsLoading(false);
-            return;
-        }
-
         try {
-            const result = await analyzeJobMatch({ resumeText: selectedResume.text, jobDescription });
+            const result = await analyzeJobMatch({ resumeText: selectedResumeText, jobDescription });
             setAnalysisResult(result);
         } catch (error) {
             console.error("Error analyzing job match: ", error);
@@ -139,37 +150,37 @@ export default function JobMatcherPage() {
             <Card className="mb-8">
                 <CardHeader>
                     <CardTitle>Start Your Analysis</CardTitle>
-                    <CardDescription>Paste a job description and select your resume to get a detailed match analysis.</CardDescription>
+                    <CardDescription>Select a resume and paste a job description to get a detailed match analysis.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                     <div className="space-y-2">
-                        <label className="font-semibold">Job Description</label>
-                        <Textarea id="job-description" placeholder="Paste the job description or job URL here..." className="h-48" value={jobDescription} onChange={e => setJobDescription(e.target.value)} />
-                    </div>
-                     <div className="space-y-2">
-                        <label className="font-semibold">Select Resume to Match</label>
-                        <div className="flex flex-wrap gap-2">
-                            {resumes.map(resume => (
-                                <Card 
-                                    key={resume.id} 
-                                    className={`p-3 cursor-pointer flex items-center gap-3 ${selectedResumeId === resume.id ? 'border-primary ring-2 ring-primary' : ''}`}
-                                    onClick={() => setSelectedResumeId(resume.id)}
-                                >
+                <CardContent className="grid md:grid-cols-2 gap-8">
+                     <div className="space-y-6">
+                        <h3 className="font-semibold">Step 1: Choose Resume</h3>
+                         <div className="p-4 border-2 border-dashed rounded-lg text-center">
+                            <FileUp className="h-8 w-8 text-muted-foreground mb-2 mx-auto" />
+                            <Button variant="outline" asChild><label className="cursor-pointer">Upload Resume<input type="file" className="sr-only" onChange={handleFileChange} accept=".docx,.txt" /></label></Button>
+                            {fileName && <p className="text-sm text-green-500 mt-2">Uploaded: {fileName}</p>}
+                            <p className="text-xs text-muted-foreground mt-1">Supports: DOCX, TXT</p>
+                        </div>
+                         <div className="relative"><div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">Or</span></div></div>
+                         <div className="space-y-2">
+                             {resumes.map(resume => (
+                                <Card key={resume.id} onClick={() => handleSelectResume(resume.id)} className={`p-3 cursor-pointer flex items-center gap-3 transition-colors ${selectedSource === resume.id ? 'border-primary ring-2 ring-primary' : 'hover:bg-muted/50'}`}>
                                     <FileText className="h-5 w-5 text-primary" />
-                                    <div>
-                                        <p className="font-semibold text-sm">{resume.id}</p>
-                                    </div>
-                                     {selectedResumeId === resume.id && <CheckCircle className="h-5 w-5 text-primary ml-auto" />}
+                                    <p className="font-semibold text-sm">{resume.id}</p>
+                                    {selectedSource === resume.id && <CheckCircle className="h-5 w-5 text-primary ml-auto" />}
                                 </Card>
                             ))}
-                            {resumes.length === 0 && !isLoading && (
-                                <p className="text-sm text-muted-foreground">You have no saved resumes. Go to the builder to create one!</p>
-                            )}
-                        </div>
+                            {resumes.length === 0 && !isLoading && <p className="text-sm text-muted-foreground text-center py-2">No saved resumes.</p>}
+                         </div>
+                    </div>
+                     <div className="space-y-4">
+                        <h3 className="font-semibold">Step 2: Add Job Description</h3>
+                        <Label htmlFor="job-description" className="sr-only">Job Description</Label>
+                        <Textarea id="job-description" placeholder="Paste the job description or job URL here..." className="h-full min-h-[300px]" value={jobDescription} onChange={e => setJobDescription(e.target.value)} />
                     </div>
                 </CardContent>
                 <div className="p-6 pt-0 text-center">
-                    <Button size="lg" onClick={handleAnalyze} disabled={isLoading || !selectedResumeId || !jobDescription}>
+                    <Button size="lg" onClick={handleAnalyze} disabled={isLoading || !selectedResumeText || !jobDescription}>
                         {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                         Analyze Job Match
                     </Button>
@@ -226,44 +237,10 @@ export default function JobMatcherPage() {
                             </div>
                         </CardContent>
                     </Card>
-
-                    {/* Similar Jobs */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Similar Job Opportunities</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                             {similarJobs.map((job, i) => (
-                                <Card key={i} className="p-4 bg-background">
-                                    <div className="flex justify-between items-start">
-                                        <div>
-                                            <h4 className="font-semibold">{job.title} - {job.company}</h4>
-                                            <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
-                                                <span><MapPin className="inline mr-1" />{job.location}</span>
-                                                <span><Wallet className="inline mr-1" />{job.salary}</span>
-                                                <span><Target className="inline mr-1" />{job.match}% match</span>
-                                            </div>
-                                        </div>
-                                        <div className="flex gap-2">
-                                            <Button variant="ghost" size="icon"><Eye className="h-4 w-4" /></Button>
-                                            <Button variant="ghost" size="icon"><Heart className="h-4 w-4" /></Button>
-                                        </div>
-                                    </div>
-                                     <p className="text-sm text-muted-foreground mt-2">{job.details}</p>
-                                </Card>
-                            ))}
-                            <Button variant="outline" className="w-full">
-                                <Search className="mr-2" /> Find More Jobs
-                            </Button>
-                        </CardContent>
-                    </Card>
-
                 </div>
             )}
         </div>
     );
 }
-
-    
 
     

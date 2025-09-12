@@ -59,26 +59,34 @@ function TemplatePreviewCard({ template, resumeData, onSelectTemplate }: { templ
     const [scale, setScale] = useState(1);
 
     useEffect(() => {
-        function updateScale() {
+        const updateScale = () => {
             if (containerRef.current) {
-                const containerWidth = containerRef.current.offsetWidth;
-                // A4 width is 210mm. Assuming 96 DPI, this is ~794px.
-                // We calculate scale based on container width.
-                const resumeWidth = 794; 
-                setScale(containerWidth / resumeWidth);
+                const { offsetWidth, offsetHeight } = containerRef.current;
+                const resumeWidth = 210; // A4 width in mm
+                const resumeHeight = 297; // A4 height in mm
+                
+                const scaleX = offsetWidth / resumeWidth;
+                const scaleY = offsetHeight / resumeHeight;
+                
+                setScale(Math.min(scaleX, scaleY));
             }
-        }
+        };
+
         updateScale();
-        window.addEventListener('resize', updateScale);
-        return () => window.removeEventListener('resize', updateScale);
+        const resizeObserver = new ResizeObserver(updateScale);
+        if (containerRef.current) {
+            resizeObserver.observe(containerRef.current);
+        }
+        
+        return () => resizeObserver.disconnect();
     }, []);
 
     return (
         <Card className="group overflow-hidden">
             <CardHeader className="p-0 relative">
                  <div ref={containerRef} className="aspect-[210/297] bg-muted flex items-center justify-center overflow-hidden">
-                   <div className="bg-white shadow-lg" style={{ width: '210mm', height: '297mm', transform: `scale(${scale})`, transformOrigin: 'top left' }}>
-                        <TemplateComponent data={resumeData} />
+                   <div className="bg-white shadow-lg" style={{ width: '210mm', height: '297mm', transform: `scale(${scale})`, transformOrigin: 'center center' }}>
+                        {TemplateComponent && <TemplateComponent data={resumeData} />}
                     </div>
                 </div>
                 <div className="absolute top-2 right-2 flex flex-col gap-2">
@@ -136,7 +144,7 @@ function TemplatesPageContent() {
 
     const filteredTemplates = useMemo(() => {
         return templates.filter(template => {
-            const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesSearch = template.name.toLowerCase().includes(searchQuery.toLowerCase()) || template.category.toLowerCase().includes(searchQuery.toLowerCase());
             const matchesCategory = activeCategory === 'All' || template.category === activeCategory;
             const matchesPrice = priceFilter === 'All' ||
                 (priceFilter === 'Free' && !template.isPremium) ||
@@ -156,7 +164,7 @@ function TemplatesPageContent() {
             <div className="flex flex-col md:flex-row gap-4 mb-8">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input placeholder="Search templates..." className="pl-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+                    <Input placeholder="Search templates by name or category..." className="pl-10" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
                 </div>
                 <Select value={priceFilter} onValueChange={setPriceFilter}>
                     <SelectTrigger className="w-full md:w-[180px]">
@@ -204,3 +212,5 @@ export default function TemplatesPage() {
         </ResumeProvider>
     )
 }
+
+    

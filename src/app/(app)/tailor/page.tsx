@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowRight, CheckCircle, Circle, Copy, Eye, FileText, Loader2, RefreshCw, Save, Sparkles, Target, XCircle } from 'lucide-react';
+import { ArrowRight, CheckCircle, FileText, Loader2, Save, Sparkles, Target, XCircle, FileUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { tailorResumeToJobDescription, TailorResumeToJobDescriptionOutput } from '@/ai/flows/tailor-resume-to-job-description';
 import { analyzeJobMatch, AnalyzeJobMatchOutput } from '@/ai/flows/analyze-job-match';
@@ -14,6 +14,9 @@ import { auth } from '@/lib/firebase';
 import { db } from '@/lib/firebase-db';
 import { collection, getDocs, doc, setDoc } from 'firebase/firestore';
 import type { ResumeData } from '@/types/resume';
+import { getResumeText } from '@/lib/get-resume-text';
+import { extractTextFromFile } from '@/ai/flows/extract-text-from-file';
+
 
 interface ResumeRecord {
   id: string;
@@ -21,27 +24,12 @@ interface ResumeRecord {
   text: string;
 }
 
-const getResumeText = (resumeData: ResumeData) => {
-    // This function now handles potentially undefined fields gracefully.
-    const sections = [
-        resumeData.summary,
-        ...(resumeData.skills?.technical || []),
-        ...(resumeData.skills?.soft || []),
-        ...resumeData.work.map(w => `${w.title} at ${w.company}: ${w.description}`),
-        ...resumeData.projects.map(p => `${p.name}: ${p.description}`),
-        ...resumeData.education.map(e => `${e.degree} from ${e.school}`),
-        ...(resumeData.certifications || []),
-        ...(resumeData.extras?.awards || []),
-        ...(resumeData.extras?.interests || []),
-        ...(resumeData.extras?.languages || []),
-    ];
-    return sections.filter(Boolean).join('\n\n');
-}
-
 export default function TailorPage() {
   const [user, setUser] = useState<User | null>(null);
   const [resumes, setResumes] = useState<ResumeRecord[]>([]);
-  const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+  const [selectedResume, setSelectedResume] = useState<ResumeRecord | null>(null);
+  const [originalResumeText, setOriginalResumeText] = useState('');
+  const [fileName, setFileName] = useState('');
   const [jobDescription, setJobDescription] = useState('');
   
   const [isLoading, setIsLoading] = useState(false);
@@ -49,7 +37,6 @@ export default function TailorPage() {
   
   const [tailoredResult, setTailoredResult] = useState<TailorResumeToJobDescriptionOutput | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalyzeJobMatchOutput | null>(null);
-  const [originalAnalysis, setOriginalAnalysis] = useState<AnalyzeJobMatchOutput | null>(null);
 
   const { toast } = useToast();
 
@@ -72,52 +59,67 @@ export default function TailorPage() {
         const querySnapshot = await getDocs(resumesCollection);
         const fetchedResumes = querySnapshot.docs.map(doc => {
             const data = doc.data() as ResumeData;
-            return {
-                id: doc.id,
-                data: data,
-                text: getResumeText(data),
-            };
+            return { id: doc.id, data: data, text: getResumeText(data) };
         });
         setResumes(fetchedResumes);
         if (fetchedResumes.length > 0) {
-            setSelectedResumeId(fetchedResumes[0].id);
+            handleSelectResume(fetchedResumes[0].id);
         }
     } catch (error) {
-        console.error("Error fetching resumes: ", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch your resumes.' });
     } finally {
         setIsLoading(false);
     }
   };
+
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+        setIsLoading(true);
+        setFileName(file.name);
+        setSelectedResume(null); 
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const dataUri = e.target?.result as string;
+            try {
+                const result = await extractTextFromFile({ fileDataUri: dataUri, mimeType: file.type });
+                setOriginalResumeText(result.text);
+                toast({ title: "Success", description: "Resume text extracted." });
+            } catch (error) {
+                toast({ variant: "destructive", title: "Error", description: (error as Error).message });
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+  };
+  
+  const handleSelectResume = (id: string) => {
+      const resume = resumes.find(r => r.id === id);
+      if (resume) {
+          setSelectedResume(resume);
+          setOriginalResumeText(resume.text);
+          setFileName('');
+      }
+  };
   
   const handleAnalyze = async () => {
-    if (!selectedResumeId || !jobDescription) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please select a resume and paste a job description.'});
-      return;
-    }
-
-    const selectedResume = resumes.find(r => r.id === selectedResumeId);
-    if (!selectedResume) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Could not find selected resume.'});
+    if (!originalResumeText || !jobDescription) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please select/upload a resume and paste a job description.'});
       return;
     }
 
     setIsLoading(true);
     try {
-      // Analyze tailored resume against job description
-      const tailoredOutput = await tailorResumeToJobDescription({ resumeText: selectedResume.text, jobDescription });
+      const tailoredOutput = await tailorResumeToJobDescription({ resumeText: originalResumeText, jobDescription });
       const tailoredAnalysis = await analyzeJobMatch({ resumeText: tailoredOutput.tailoredResumeText, jobDescription });
-      
-      // Analyze original resume against job description for comparison
-      const originalResumeAnalysis = await analyzeJobMatch({ resumeText: selectedResume.text, jobDescription });
       
       setTailoredResult(tailoredOutput);
       setAnalysisResult(tailoredAnalysis);
-      setOriginalAnalysis(originalResumeAnalysis);
       setIsAnalyzed(true);
 
     } catch (error) {
-      console.error("Error tailoring resume:", error);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to tailor resume.'});
     } finally {
       setIsLoading(false);
@@ -128,32 +130,31 @@ export default function TailorPage() {
     setIsAnalyzed(false);
     setTailoredResult(null);
     setAnalysisResult(null);
-    setOriginalAnalysis(null);
     setJobDescription('');
   };
   
   const handleSaveAsNew = async () => {
-    if (!user || !selectedResumeId || !tailoredResult) return;
-    
-    const originalResume = resumes.find(r => r.id === selectedResumeId);
-    if (!originalResume) return;
+    if (!user || !selectedResume || !tailoredResult) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Cannot save tailored version of an uploaded (unsaved) resume.' });
+        return;
+    };
 
-    const newName = `${originalResume.id} (Tailored)`;
+    const newName = `${selectedResume.id} (Tailored)`;
     
     // This is a simplified update. A more robust solution would parse the tailored text back into the ResumeData structure.
     const newResumeData: ResumeData = {
-        ...originalResume.data,
-        summary: tailoredResult.tailoredResumeText.split('\n\n')[1] || originalResume.data.summary,
-        work: originalResume.data.work.map(w => ({...w, description: tailoredResult.tailoredResumeText.includes(w.company) ? tailoredResult.tailoredResumeText : w.description }))
+        ...selectedResume.data,
+        summary: tailoredResult.tailoredResumeText.split('\n\n')[0] || selectedResume.data.summary,
+        // This is a naive update and might not correctly map descriptions
+        work: selectedResume.data.work.map(w => ({...w, description: tailoredResult.tailoredResumeText.includes(w.company) ? tailoredResult.tailoredResumeText : w.description }))
     };
 
     try {
         const resumeRef = doc(db, `users/${user.uid}/resumes`, newName);
-        await setDoc(resumeRef, newResumeData);
+        await setDoc(resumeRef, newResumeData, { merge: true });
         toast({ title: 'Success', description: `Resume "${newName}" saved.` });
         fetchResumes(user.uid);
     } catch (error) {
-        console.error("Error saving resume: ", error);
         toast({ variant: 'destructive', title: 'Error', description: 'Failed to save new resume.' });
     }
   };
@@ -163,8 +164,6 @@ export default function TailorPage() {
     if (score > 70) return 'text-yellow-500';
     return 'text-red-500';
   };
-  
-  const selectedResumeData = resumes.find(r => r.id === selectedResumeId)?.data;
 
   return (
     <div className="container py-10">
@@ -177,41 +176,44 @@ export default function TailorPage() {
         <Card>
           <CardHeader>
             <CardTitle>Start Tailoring</CardTitle>
-            <CardDescription>Select your base resume and paste the job description to begin.</CardDescription>
+            <CardDescription>Select a resume and paste the job description to begin.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-                <h3 className="font-semibold mb-2">Step 1: Select Your Resume</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <CardContent className="grid md:grid-cols-2 gap-8">
+            <div className="space-y-4">
+                <h3 className="font-semibold">Step 1: Choose Your Resume</h3>
+                 <div className="p-4 border-2 border-dashed rounded-lg text-center">
+                    <FileUp className="h-8 w-8 text-muted-foreground mb-2 mx-auto" />
+                    <Button variant="outline" asChild><label className="cursor-pointer">Upload Resume<input type="file" className="sr-only" onChange={handleFileChange} accept=".docx,.txt" /></label></Button>
+                    {fileName && <p className="text-sm text-green-500 mt-2">Uploaded: {fileName}</p>}
+                    <p className="text-xs text-muted-foreground mt-1">Supports: DOCX, TXT</p>
+                </div>
+                <div className="relative my-2"><div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">Or</span></div></div>
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                     {resumes.map(resume => (
-                         <Card key={resume.id} className={`p-4 cursor-pointer ${selectedResumeId === resume.id ? 'border-primary ring-2 ring-primary' : ''}`} onClick={() => setSelectedResumeId(resume.id)}>
-                            <div className="flex items-center gap-3">
-                                <FileText className="h-6 w-6 text-primary" />
-                                <div>
-                                    <p className="font-semibold">{resume.id}</p>
-                                </div>
-                            </div>
+                         <Card key={resume.id} className={`p-3 cursor-pointer flex items-center gap-3 transition-colors ${selectedResume?.id === resume.id ? 'border-primary ring-2 ring-primary' : 'hover:bg-muted/50'}`} onClick={() => handleSelectResume(resume.id)}>
+                            <FileText className="h-5 w-5 text-primary" />
+                             <p className="font-semibold text-sm">{resume.id}</p>
+                            {selectedResume?.id === resume.id && <CheckCircle className="h-5 w-5 text-primary ml-auto" />}
                         </Card>
                     ))}
-                    {isLoading && <Loader2 className="h-6 w-6 animate-spin" />}
-                    {resumes.length === 0 && !isLoading && <p className="text-sm text-muted-foreground">No resumes found.</p>}
+                    {isLoading && <Loader2 className="h-6 w-6 animate-spin mx-auto" />}
+                    {resumes.length === 0 && !isLoading && <p className="text-sm text-muted-foreground text-center py-2">No resumes found.</p>}
                 </div>
             </div>
-             <div>
-                <h3 className="font-semibold mb-2">Step 2: Add Job Description</h3>
-                <Textarea placeholder="Paste the complete job description here..." rows={12} value={jobDescription} onChange={e => setJobDescription(e.target.value)} />
+             <div className="space-y-4">
+                <h3 className="font-semibold">Step 2: Add Job Description</h3>
+                <Textarea placeholder="Paste the complete job description here..." className="h-full min-h-[300px]" value={jobDescription} onChange={e => setJobDescription(e.target.value)} />
              </div>
-             <div className="text-center">
-                <Button size="lg" onClick={handleAnalyze} disabled={!selectedResumeId || isLoading || !jobDescription}>
+          </CardContent>
+           <CardFooter className="text-center flex-col gap-4 pt-4">
+                <Button size="lg" onClick={handleAnalyze} disabled={!originalResumeText || isLoading || !jobDescription}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     <Target className="mr-2" /> Analyze & Tailor Resume
                 </Button>
-             </div>
-          </CardContent>
+             </CardFooter>
         </Card>
       ) : (
         <div className="space-y-8">
-            {/* Job Match Analysis */}
             {analysisResult && (
             <Card>
                 <CardHeader>
@@ -232,50 +234,30 @@ export default function TailorPage() {
                     </div>
                     <div className="md:col-span-2 space-y-3">
                         <h3 className="font-semibold">Key Requirements</h3>
+                        <div className="space-y-2 max-h-48 overflow-auto pr-2">
                         {analysisResult.metRequirements.map((req, i) => (
-                             <div key={`met-${i}`} className="flex items-center gap-2 text-sm">
-                                <CheckCircle className="h-5 w-5 text-green-500" />
-                                <span>{req}</span>
-                             </div>
+                             <div key={`met-${i}`} className="flex items-center gap-2 text-sm"><CheckCircle className="h-5 w-5 text-green-500 shrink-0" /><span>{req}</span></div>
                         ))}
                          {analysisResult.missingRequirements.map((req, i) => (
-                             <div key={`missing-${i}`} className="flex items-center gap-2 text-sm">
-                                <XCircle className="h-5 w-5 text-red-500" />
-                                <span>{req}</span>
-                             </div>
+                             <div key={`missing-${i}`} className="flex items-center gap-2 text-sm"><XCircle className="h-5 w-5 text-red-500 shrink-0" /><span>{req}</span></div>
                         ))}
+                        </div>
                     </div>
                 </CardContent>
             </Card>
             )}
 
-            {/* Side-by-Side Comparison */}
-            {tailoredResult && selectedResumeData && (
+            {tailoredResult && (
             <Card>
                 <CardHeader>
-                    <CardTitle>Resume Comparison: Original vs Tailored</CardTitle>
+                    <CardTitle>Tailored Resume</CardTitle>
+                    <CardDescription>Your resume has been optimized for the job description.</CardDescription>
                 </CardHeader>
-                <CardContent className="grid md:grid-cols-2 gap-6 items-start">
-                    <div>
-                        <Badge variant="secondary" className="mb-2">Original</Badge>
-                        <Card className="p-4 bg-background h-96 overflow-y-auto">
-                            <h4 className="font-bold">PROFESSIONAL SUMMARY</h4>
-                            <p className="text-sm text-muted-foreground mb-4">{selectedResumeData.summary}</p>
-                             <h4 className="font-bold">EXPERIENCE</h4>
-                            <ul className="list-disc list-inside text-sm text-muted-foreground">
-                                {selectedResumeData.work.map((job, i) => <li key={i}>{job.description}</li>)}
-                            </ul>
-                        </Card>
-                    </div>
-                    <div>
-                        <Badge className="mb-2">Tailored</Badge>
-                         <Card className="p-4 bg-background h-96 overflow-y-auto border-primary">
-                             <pre className="text-sm text-muted-foreground whitespace-pre-wrap font-sans">{tailoredResult.tailoredResumeText}</pre>
-                        </Card>
-                    </div>
+                <CardContent>
+                    <Textarea readOnly value={tailoredResult.tailoredResumeText} className="h-96" />
                 </CardContent>
                 <CardFooter className="justify-center gap-4">
-                    <Button onClick={handleSaveAsNew}><Save className="mr-2" /> Save as New Resume</Button>
+                    <Button onClick={handleSaveAsNew} disabled={!selectedResume}><Save className="mr-2" /> Save as New Version</Button>
                 </CardFooter>
             </Card>
             )}

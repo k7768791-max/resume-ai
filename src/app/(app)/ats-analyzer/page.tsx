@@ -1,17 +1,26 @@
 
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, BarChart, CheckCircle, ChevronRight, Download, Edit, FileUp, Lightbulb, RefreshCw, Sparkles, Target, XCircle } from "lucide-react";
-import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis } from "recharts"
-import { Badge } from "@/components/ui/badge";
+import { Loader2, CheckCircle, ChevronRight, RefreshCw, FileUp, FileText, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { analyzeJobMatch, AnalyzeJobMatchOutput } from "@/ai/flows/analyze-job-match";
 import { extractTextFromFile } from "@/ai/flows/extract-text-from-file";
 import { Label } from "@/components/ui/label";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth, db } from "@/lib/firebase";
+import { collection, getDocs } from "firebase/firestore";
+import type { ResumeData } from "@/types/resume";
+import { getResumeText } from "@/lib/get-resume-text";
+
+
+interface ResumeRecord {
+  id: string;
+  text: string;
+}
 
 export default function AtsAnalyzerPage() {
     const [analysisResult, setAnalysisResult] = useState<AnalyzeJobMatchOutput | null>(null);
@@ -19,13 +28,54 @@ export default function AtsAnalyzerPage() {
     const [jobDescription, setJobDescription] = useState('');
     const [resumeText, setResumeText] = useState('');
     const [fileName, setFileName] = useState('');
+    const [resumes, setResumes] = useState<ResumeRecord[]>([]);
+    const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+
     const { toast } = useToast();
+    
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            setCurrentUser(user);
+            if (user) {
+                fetchResumes(user.uid);
+            } else {
+                setResumes([]);
+            }
+        });
+        return () => unsubscribe();
+    }, []);
+
+    const fetchResumes = async (uid: string) => {
+        setIsLoading(true);
+        try {
+            const resumesCollection = collection(db, `users/${uid}/resumes`);
+            const querySnapshot = await getDocs(resumesCollection);
+            const fetchedResumes = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                text: getResumeText(doc.data() as ResumeData),
+            }));
+            setResumes(fetchedResumes);
+            if (fetchedResumes.length > 0) {
+                const firstResume = fetchedResumes[0];
+                setSelectedResumeId(firstResume.id);
+                setResumeText(firstResume.text);
+            }
+        } catch (error) {
+            console.error("Error fetching resumes: ", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch resumes.' });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
             setIsLoading(true);
             setFileName(file.name);
+            setSelectedResumeId(null); // Deselect any saved resume
             const reader = new FileReader();
             reader.onload = async (e) => {
                 const dataUri = e.target?.result as string;
@@ -35,7 +85,7 @@ export default function AtsAnalyzerPage() {
                     toast({ title: "Success", description: "Resume text extracted." });
                 } catch (error) {
                     console.error(error);
-                    toast({ variant: "destructive", title: "Error", description: "Failed to extract text from file." });
+                    toast({ variant: "destructive", title: "Error", description: (error as Error).message });
                 } finally {
                     setIsLoading(false);
                 }
@@ -46,7 +96,11 @@ export default function AtsAnalyzerPage() {
 
     const handleAnalyze = async () => {
         if (!resumeText) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Please upload a resume first.' });
+            toast({ variant: 'destructive', title: 'Error', description: 'Please select or upload a resume first.' });
+            return;
+        }
+        if (!jobDescription) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please paste a job description.'});
             return;
         }
         setIsLoading(true);
@@ -63,9 +117,18 @@ export default function AtsAnalyzerPage() {
     
     const resetState = () => {
         setAnalysisResult(null);
-        setResumeText('');
         setJobDescription('');
-        setFileName('');
+        // Reset to first resume if available
+        if (resumes.length > 0) {
+            const firstResume = resumes[0];
+            setSelectedResumeId(firstResume.id);
+            setResumeText(firstResume.text);
+            setFileName('');
+        } else {
+            setSelectedResumeId(null);
+            setResumeText('');
+            setFileName('');
+        }
     };
 
     const getScoreColor = (score: number) => {
@@ -73,6 +136,15 @@ export default function AtsAnalyzerPage() {
         if (score > 70) return 'text-yellow-500';
         return 'text-red-500';
     };
+    
+    const handleSelectResume = (id: string) => {
+        const selected = resumes.find(r => r.id === id);
+        if (selected) {
+            setSelectedResumeId(id);
+            setResumeText(selected.text);
+            setFileName(''); // Clear file name when selecting from saved
+        }
+    }
 
     return (
         <div className="container py-10">
@@ -85,38 +157,67 @@ export default function AtsAnalyzerPage() {
                 <Card className="mb-8">
                     <CardHeader>
                         <CardTitle>Start Your Analysis</CardTitle>
-                        <CardDescription>Upload your resume and paste a job description for the most accurate results.</CardDescription>
+                        <CardDescription>Select a resume and paste a job description for the most accurate results.</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                         <div className="grid md:grid-cols-2 gap-6">
-                            <div className="flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-lg text-center h-full relative">
-                                <FileUp className="h-12 w-12 text-muted-foreground mb-4" />
-                                <h3 className="text-lg font-semibold mb-2">Upload Resume</h3>
-                                <p className="text-muted-foreground text-sm mb-4">
-                                    {fileName ? `File: ${fileName}` : "Drag & drop or click to browse"}
-                                </p>
+                    <CardContent className="grid md:grid-cols-2 gap-8">
+                        <div className="space-y-6">
+                            <h3 className="font-semibold">Step 1: Choose Your Resume</h3>
+                            <div className="p-4 border-2 border-dashed rounded-lg text-center relative">
+                                <FileUp className="h-10 w-10 text-muted-foreground mb-2 mx-auto" />
+                                <h4 className="text-md font-semibold mb-2">Upload New Resume</h4>
                                 <Button variant="outline" asChild>
                                     <label htmlFor="resume-upload" className="cursor-pointer">
                                         Choose File
-                                        <input id="resume-upload" type="file" className="sr-only" onChange={handleFileChange} accept=".pdf,.doc,.docx,.txt" />
+                                        <input id="resume-upload" type="file" className="sr-only" onChange={handleFileChange} accept=".docx,.txt" />
                                     </label>
                                 </Button>
-                                <p className="text-xs text-muted-foreground mt-2">Supports: PDF, DOCX, TXT</p>
+                                <p className="text-xs text-muted-foreground mt-2">Supports: DOCX, TXT</p>
+                                {fileName && <p className="text-sm text-green-500 mt-2">Uploaded: {fileName}</p>}
                             </div>
-                            <div className="space-y-4">
-                                <Label htmlFor="job-description" className="font-semibold">Job Description (Optional)</Label>
-                                <Textarea 
-                                    id="job-description" 
-                                    placeholder="Paste the job description here..." 
-                                    className="h-48"
-                                    value={jobDescription}
-                                    onChange={(e) => setJobDescription(e.target.value)}
-                                />
+
+                             <div className="relative">
+                                <div className="absolute inset-0 flex items-center">
+                                    <span className="w-full border-t" />
+                                </div>
+                                <div className="relative flex justify-center text-xs uppercase">
+                                    <span className="bg-card px-2 text-muted-foreground">Or</span>
+                                </div>
                             </div>
+                            
+                            <div>
+                                <h4 className="text-md font-semibold mb-2">Select a Saved Resume</h4>
+                                 <div className="space-y-2">
+                                     {resumes.map(resume => (
+                                        <Card 
+                                            key={resume.id} 
+                                            className={`p-3 cursor-pointer flex items-center gap-3 transition-colors ${selectedResumeId === resume.id ? 'border-primary ring-2 ring-primary' : 'hover:bg-muted/50'}`}
+                                            onClick={() => handleSelectResume(resume.id)}
+                                        >
+                                            <FileText className="h-5 w-5 text-primary" />
+                                            <p className="font-semibold text-sm">{resume.id}</p>
+                                            {selectedResumeId === resume.id && <CheckCircle className="h-5 w-5 text-primary ml-auto" />}
+                                        </Card>
+                                    ))}
+                                    {resumes.length === 0 && !isLoading && (
+                                        <p className="text-sm text-muted-foreground text-center py-4">No saved resumes found.</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <div className="space-y-4">
+                             <h3 className="font-semibold">Step 2: Add Job Description</h3>
+                            <Label htmlFor="job-description" className="sr-only">Job Description</Label>
+                            <Textarea 
+                                id="job-description" 
+                                placeholder="Paste the job description here..." 
+                                className="h-full min-h-[300px]"
+                                value={jobDescription}
+                                onChange={(e) => setJobDescription(e.target.value)}
+                            />
                         </div>
                     </CardContent>
                     <div className="p-6 pt-0 text-center">
-                        <Button size="lg" onClick={handleAnalyze} disabled={isLoading || !resumeText}>
+                        <Button size="lg" onClick={handleAnalyze} disabled={isLoading || !resumeText || !jobDescription}>
                              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Analyze Resume
                         </Button>
@@ -146,7 +247,7 @@ export default function AtsAnalyzerPage() {
                             </p>
                         </div>
                         <div className="md:col-span-2 space-y-4">
-                            <h3 className="font-semibold mb-3 flex items-center gap-2"><XCircle className="text-yellow-500" /> Missing Requirements</h3>
+                            <h3 className="font-semibold mb-3 flex items-center gap-2">Missing Requirements</h3>
                              <ul className="space-y-2 list-inside">
                                 {analysisResult.missingRequirements.length > 0 ? (
                                     analysisResult.missingRequirements.map((item, i) => (
@@ -170,3 +271,5 @@ export default function AtsAnalyzerPage() {
         </div>
     );
 }
+
+    

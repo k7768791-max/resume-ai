@@ -3,28 +3,20 @@
 
 import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Separator } from "@/components/ui/separator";
-import { Activity, ArrowUpRight, Bot, Copy, FilePlus, FileText, Filter, Linkedin, Search, Send, Star, Trash2, TrendingUp, Loader2, Mail } from "lucide-react";
+import { Activity, ArrowUpRight, Bot, Copy, FilePlus, FileText, Filter, Linkedin, Search, Send, Star, Trash2, TrendingUp, Loader2, Mail, Share2 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { auth } from '@/lib/firebase';
 import { db } from '@/lib/firebase-db';
-import { collection, getDocs, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
+import { collection, onSnapshot, deleteDoc, doc, query, where } from 'firebase/firestore';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import type { ResumeData } from '@/types/resume';
 import { useToast } from '@/hooks/use-toast';
+import { getResumeText } from '@/lib/get-resume-text';
 
-
-const quickStats = [
-  { title: "Resumes Created", value: "5", icon: <FileText className="h-6 w-6 text-muted-foreground" /> },
-  { title: "Avg. ATS Score", value: "87%", icon: <Bot className="h-6 w-6 text-muted-foreground" /> },
-  { title: "Applications Sent", value: "12", icon: <Send className="h-6 w-6 text-muted-foreground" /> },
-  { title: "Success Rate", value: "4.8", icon: <Star className="h-6 w-6 text-muted-foreground" /> },
-];
 
 const quickActions = [
     { title: "New Resume", description: "Create from scratch", icon: <FilePlus className="h-8 w-8 text-primary" />, href: "/builder/new" },
@@ -33,13 +25,6 @@ const quickActions = [
     { title: "Cover Letter", description: "Generate a letter", icon: <Mail className="h-8 w-8 text-primary" />, href: "/cover-letter" },
     { title: "LinkedIn", description: "Optimize your profile", icon: <Linkedin className="h-8 w-8 text-primary" />, href: "/linkedin-optimizer" },
     { title: "Templates", description: "Browse our templates", icon: <FileText className="h-8 w-8 text-primary" />, href: "/templates" },
-];
-
-const recentActivities = [
-    { text: "Software Dev Resume analyzed - ATS Score: 92%", icon: <Bot className="h-5 w-5 text-primary" /> },
-    { text: "Data Analyst Resume exported to PDF", icon: <Send className="h-5 w-5 text-primary" /> },
-    { text: "Product Manager Resume updated", icon: <FileText className="h-5 w-5 text-primary" /> },
-    { text: "Job match found: Senior Developer at TechCorp", icon: <TrendingUp className="h-5 w-5 text-primary" /> },
 ];
 
 
@@ -54,7 +39,9 @@ interface ResumeRecord {
 export default function DashboardPage() {
     const [user, setUser] = useState<User | null>(null);
     const [resumes, setResumes] = useState<ResumeRecord[]>([]);
+    const [filteredResumes, setFilteredResumes] = useState<ResumeRecord[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
     const { toast } = useToast();
 
     useEffect(() => {
@@ -79,9 +66,10 @@ export default function DashboardPage() {
                 id: doc.id,
                 data: doc.data() as ResumeData,
                 atsScore: Math.floor(Math.random() * 30) + 70, // Placeholder score
-                modified: "2d ago", // Placeholder date
+                modified: new Date(doc.data().modifiedAt?.toDate() || Date.now()).toLocaleDateString(),
             }));
             setResumes(fetchedResumes);
+            setFilteredResumes(fetchedResumes);
             setIsLoading(false);
         }, (error) => {
             console.error("Error fetching resumes: ", error);
@@ -92,6 +80,13 @@ export default function DashboardPage() {
         return () => unsubscribeFirestore();
 
     }, [user, toast]);
+
+    useEffect(() => {
+        const results = resumes.filter(resume =>
+            resume.id.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+        setFilteredResumes(results);
+    }, [searchQuery, resumes]);
 
     const deleteResume = async (resumeId: string) => {
         if (!user) return;
@@ -105,7 +100,12 @@ export default function DashboardPage() {
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to delete resume.' });
         }
     };
-
+    
+    const handleShare = (resumeId: string) => {
+        const url = `${window.location.origin}/share/resume/${user?.uid}/${resumeId}`;
+        navigator.clipboard.writeText(url);
+        toast({ title: "Copied!", description: "Shareable link copied to clipboard." });
+    };
 
   return (
     <div className="flex-1 space-y-8 p-4 md:p-8">
@@ -116,29 +116,14 @@ export default function DashboardPage() {
             </div>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {quickStats.map((stat) => (
-            <Card key={stat.title}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-                {stat.icon}
-                </CardHeader>
-                <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                </CardContent>
-            </Card>
-            ))}
-        </div>
-
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-3">
                 {/* Quick Actions */}
                 <Card>
                     <CardHeader>
                         <CardTitle>Quick Actions</CardTitle>
                     </CardHeader>
-                    <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                         {quickActions.map((action) => (
                         <Link href={action.href} key={action.title}>
                             <div className="flex flex-col items-center justify-center p-4 border rounded-lg hover:bg-muted/50 transition-colors h-full">
@@ -159,12 +144,13 @@ export default function DashboardPage() {
                             <div className="flex items-center gap-2">
                                 <div className="relative flex-1">
                                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                    <Input placeholder="Search resumes..." className="pl-8" />
+                                    <Input 
+                                        placeholder="Search resumes..." 
+                                        className="pl-8" 
+                                        value={searchQuery}
+                                        onChange={e => setSearchQuery(e.target.value)}
+                                    />
                                 </div>
-                                <Button variant="outline">
-                                    <Filter className="h-4 w-4 mr-2" />
-                                    Filter
-                                </Button>
                             </div>
                         </div>
                     </CardHeader>
@@ -181,8 +167,8 @@ export default function DashboardPage() {
                                 </Button>
                             </div>
                         ) : (
-                            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {resumes.map((resume) => (
+                            <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {filteredResumes.map((resume) => (
                                 <Card key={resume.id} className="group">
                                     <CardHeader className="p-0">
                                         <div className="aspect-[3/4] bg-muted rounded-t-md flex items-center justify-center p-4 relative">
@@ -203,32 +189,14 @@ export default function DashboardPage() {
                                         <Button asChild size="sm">
                                             <Link href={`/builder/${resume.id}`}>Edit</Link>
                                         </Button>
-                                        <Button variant="outline" size="sm"><Send className="h-4 w-4 mr-2" /> Share</Button>
-                                        <Button variant="ghost" size="sm"><Copy className="h-4 w-4 mr-2" /> Copy</Button>
+                                        <Button variant="outline" size="sm" onClick={() => handleShare(resume.id)}><Share2 className="h-4 w-4 mr-2" /> Share</Button>
+                                        <Button variant="ghost" size="sm" onClick={() => { navigator.clipboard.writeText(getResumeText(resume.data)); toast({title: "Copied!"}) }}><Copy className="h-4 w-4 mr-2" /> Copy</Button>
                                         <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-500 hover:bg-red-500/10" onClick={() => deleteResume(resume.id)}><Trash2 className="h-4 w-4 mr-2" /> Delete</Button>
                                     </CardFooter>
                                 </Card>
                                 ))}
                             </div>
                         )}
-                    </CardContent>
-                </Card>
-            </div>
-            
-            <div className="lg:col-span-1">
-                {/* Recent Activity */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Recent Activity</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {recentActivities.map((activity, i) => (
-                            <div key={i} className="flex items-start gap-4">
-                                {activity.icon}
-                                <p className="text-sm text-muted-foreground">{activity.text}</p>
-                            </div>
-                        ))}
-                         <Button variant="link" className="p-0 h-auto">View All Activity <ArrowUpRight className="h-4 w-4 ml-1" /></Button>
                     </CardContent>
                 </Card>
             </div>

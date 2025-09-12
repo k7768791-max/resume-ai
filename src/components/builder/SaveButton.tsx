@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useResume } from '@/context/ResumeContext';
 import { auth } from '@/lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase-db';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Save } from 'lucide-react';
@@ -24,7 +24,7 @@ export function SaveButton({ resumeId }: { resumeId: string }) {
     const isNewResume = resumeId === 'new';
 
     const handleSave = async () => {
-        if (!resumeName) {
+        if (!resumeName.trim()) {
             toast({ variant: 'destructive', title: 'Error', description: 'Please enter a name for the resume.' });
             return;
         }
@@ -37,12 +37,16 @@ export function SaveButton({ resumeId }: { resumeId: string }) {
 
         setIsSaving(true);
         try {
-            const resumeRef = doc(db, `users/${user.uid}/resumes`, resumeName);
-            await setDoc(resumeRef, resumeData);
-            toast({ title: 'Success', description: `Resume "${resumeName}" saved successfully.` });
+            const resumeRef = doc(db, `users/${user.uid}/resumes`, resumeName.trim());
+            const dataToSave = {
+                ...resumeData,
+                modifiedAt: serverTimestamp()
+            };
+            await setDoc(resumeRef, dataToSave, { merge: true });
+            toast({ title: 'Success', description: `Resume "${resumeName.trim()}" saved successfully.` });
             setIsOpen(false);
             if(isNewResume) {
-                router.replace(`/builder/${resumeName}`);
+                router.replace(`/builder/${resumeName.trim()}`);
             }
         } catch (error) {
             console.error("Error saving resume: ", error);
@@ -96,3 +100,5 @@ export function SaveButton({ resumeId }: { resumeId: string }) {
         </>
     );
 }
+
+    

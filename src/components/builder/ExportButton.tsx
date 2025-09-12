@@ -15,41 +15,49 @@ export function ExportButton() {
     const exportToPDF = () => {
         const input = document.getElementById('resume-content');
         if (input) {
-            // Temporarily remove shadow for capture
             const originalShadow = input.style.boxShadow;
             input.style.boxShadow = 'none';
 
             html2canvas(input, { 
-                scale: 2, // Higher scale for better quality
+                scale: 3, // Increased scale for better quality
                 useCORS: true,
                 logging: false,
                 width: input.offsetWidth,
                 height: input.offsetHeight,
              }).then(canvas => {
-                // Restore shadow
                 input.style.boxShadow = originalShadow;
 
-                const imgData = canvas.toDataURL('image/png');
-                const pdf = new jsPDF('p', 'mm', 'a4');
+                const imgData = canvas.toDataURL('image/png', 1.0); // Use PNG with max quality
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+
                 const pdfWidth = pdf.internal.pageSize.getWidth();
                 const pdfHeight = pdf.internal.pageSize.getHeight();
-                
                 const canvasWidth = canvas.width;
                 const canvasHeight = canvas.height;
+                const canvasAspectRatio = canvasWidth / canvasHeight;
                 
-                const ratio = canvasWidth / canvasHeight;
-                let imgHeight = pdfWidth / ratio;
-                let heightLeft = imgHeight;
+                let renderWidth = pdfWidth;
+                let renderHeight = renderWidth / canvasAspectRatio;
 
+                if (renderHeight > pdfHeight) {
+                    renderHeight = pdfHeight;
+                    renderWidth = renderHeight * canvasAspectRatio;
+                }
+                
                 let position = 0;
+                let heightLeft = renderHeight;
 
-                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                pdf.addImage(imgData, 'PNG', 0, position, renderWidth, renderHeight);
                 heightLeft -= pdfHeight;
 
-                while (heightLeft >= 0) {
-                    position = heightLeft - imgHeight;
+                while (heightLeft > 0) {
+                    position = -renderHeight + heightLeft;
                     pdf.addPage();
-                    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+                    pdf.addImage(imgData, 'PNG', 0, position, renderWidth, renderHeight);
                     heightLeft -= pdfHeight;
                 }
                 
@@ -59,7 +67,7 @@ export function ExportButton() {
     };
     
     const exportToDOCX = () => {
-        const { personal, summary, skills, work, projects, education, certifications } = resumeData;
+        const { personal, summary, skills, work, projects, education, certifications, extras } = resumeData;
         
         const doc = new Document({
             sections: [{
@@ -79,7 +87,7 @@ export function ExportButton() {
                     new Paragraph({ text: summary, spacing: { after: 200 } }),
                     
                     new Paragraph({ text: "Skills", heading: HeadingLevel.HEADING_1, border: { bottom: { color: "auto", space: 1, value: "single", size: 6 } } }),
-                    new Paragraph({ text: skills.technical.join(', '), spacing: { after: 200 } }),
+                    ...skills.technical.map(skillLine => new Paragraph({ text: skillLine, spacing: { after: 100 } })),
                      
                     new Paragraph({ text: "Experience", heading: HeadingLevel.HEADING_1, border: { bottom: { color: "auto", space: 1, value: "single", size: 6 } } }),
                     ...work.flatMap(job => [
@@ -113,6 +121,11 @@ export function ExportButton() {
                         new Paragraph({ text: "Certifications", heading: HeadingLevel.HEADING_1, border: { bottom: { color: "auto", space: 1, value: "single", size: 6 } } }),
                         ...certifications.map(cert => new Paragraph({ text: cert, bullet: { level: 0 } }))
                     ] : []),
+                    
+                    ...(extras?.awards && extras.awards.length > 0 ? [
+                        new Paragraph({ text: "Awards", heading: HeadingLevel.HEADING_1, border: { bottom: { color: "auto", space: 1, value: "single", size: 6 } } }),
+                        ...extras.awards.map(award => new Paragraph({ text: award, bullet: { level: 0 } }))
+                    ] : []),
                 ],
             }],
         });
@@ -137,3 +150,5 @@ export function ExportButton() {
         </DropdownMenu>
     );
 }
+
+    

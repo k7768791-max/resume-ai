@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowRight, CheckCircle, Clipboard, Copy, Edit, FileText, Lightbulb, Linkedin, RefreshCw, Sparkles, Target, Upload, XCircle, Loader2 } from 'lucide-react';
+import { ArrowRight, CheckCircle, Clipboard, Copy, Edit, FileText, Lightbulb, Linkedin, RefreshCw, Sparkles, Target, Upload, XCircle, Loader2, FileUp } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -17,36 +17,24 @@ import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import type { ResumeData } from '@/types/resume';
 import { generateLinkedInSummary } from '@/ai/flows/generate-linkedin-summary';
 import { recommendSkillsForLinkedIn } from '@/ai/flows/recommend-skills-for-linkedin';
+import { getResumeText } from '@/lib/get-resume-text';
+import { extractTextFromFile } from '@/ai/flows/extract-text-from-file';
 
 interface ResumeRecord {
   id: string;
   text: string;
 }
 
-const getResumeText = (resumeData: ResumeData) => {
-    // This function now handles potentially undefined fields gracefully.
-    const sections = [
-        resumeData.summary,
-        ...(resumeData.skills?.technical || []),
-        ...(resumeData.skills?.soft || []),
-        ...resumeData.work.map(w => `${w.title} at ${w.company}: ${w.description}`),
-        ...resumeData.projects.map(p => `${p.name}: ${p.description}`),
-        ...resumeData.education.map(e => `${e.degree} from ${e.school}`),
-        ...(resumeData.certifications || []),
-        ...(resumeData.extras?.awards || []),
-        ...(resumeData.extras?.interests || []),
-        ...(resumeData.extras?.languages || []),
-    ];
-    return sections.filter(Boolean).join('\n\n');
-}
-
 export default function LinkedInOptimizerPage() {
     const [user, setUser] = useState<User | null>(null);
     const [resumes, setResumes] = useState<ResumeRecord[]>([]);
-    const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+    const [selectedResumeText, setSelectedResumeText] = useState<string | null>(null);
+    const [selectedSource, setSelectedSource] = useState<string | null>(null);
+    const [fileName, setFileName] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [generatedSummary, setGeneratedSummary] = useState('');
+    const [generatedTitle, setGeneratedTitle] = useState('');
     const [recommendedSkills, setRecommendedSkills] = useState<string[]>([]);
     const [userProfile, setUserProfile] = useState<{ industry?: string; experienceLevel?: string }>({});
     const { toast } = useToast();
@@ -69,19 +57,16 @@ export default function LinkedInOptimizerPage() {
         try {
             const resumesCollection = collection(db, `users/${uid}/resumes`);
             const querySnapshot = await getDocs(resumesCollection);
-            const fetchedResumes = querySnapshot.docs.map(doc => {
-                 const data = doc.data() as ResumeData;
-                return {
-                    id: doc.id,
-                    text: getResumeText(data),
-                };
-            });
+            const fetchedResumes = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                text: getResumeText(doc.data() as ResumeData),
+            }));
             setResumes(fetchedResumes);
             if (fetchedResumes.length > 0) {
-                setSelectedResumeId(fetchedResumes[0].id);
+                setSelectedSource(fetchedResumes[0].id);
+                setSelectedResumeText(fetchedResumes[0].text);
             }
         } catch (error) {
-            console.error("Error fetching resumes: ", error);
             toast({ variant: 'destructive', title: 'Error', description: 'Failed to fetch your resumes.' });
         } finally {
             setIsLoading(false);
@@ -95,29 +80,62 @@ export default function LinkedInOptimizerPage() {
             setUserProfile(docSnap.data());
         }
     };
+    
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setIsLoading(true);
+            setFileName(file.name);
+            try {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const dataUri = e.target?.result as string;
+                    try {
+                        const result = await extractTextFromFile({ fileDataUri: dataUri, mimeType: file.type });
+                        setSelectedResumeText(result.text);
+                        setSelectedSource('uploaded');
+                        toast({ title: "Success", description: "Resume text extracted." });
+                    } catch (error) {
+                        toast({ variant: "destructive", title: "Error", description: (error as Error).message });
+                    } finally {
+                        setIsLoading(false);
+                    }
+                };
+                reader.readAsDataURL(file);
+            } catch (err) {
+                 toast({ variant: "destructive", title: "Error", description: "Could not read file."});
+                 setIsLoading(false);
+            }
+        }
+    };
+    
+    const handleSelectResume = (id: string) => {
+        const resume = resumes.find(r => r.id === id);
+        if (resume) {
+            setSelectedResumeText(resume.text);
+            setSelectedSource(id);
+            setFileName('');
+        }
+    };
 
     const handleGenerate = async () => {
-        if (!selectedResumeId) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Please select a resume.' });
+        if (!selectedResumeText) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Please select or upload a resume.' });
             return;
         }
         
-        const selectedResume = resumes.find(r => r.id === selectedResumeId);
-        if (!selectedResume) {
-             toast({ variant: 'destructive', title: 'Error', description: 'Could not find selected resume.'});
-            return;
-        }
-
         setIsGenerating(true);
         try {
+            // Placeholder for a more complex AI flow that generates all parts
             const [summaryResult, skillsResult] = await Promise.all([
-                generateLinkedInSummary({ resumeText: selectedResume.text }),
+                generateLinkedInSummary({ resumeText: selectedResumeText }),
                 userProfile.industry && userProfile.experienceLevel 
                     ? recommendSkillsForLinkedIn({ industry: userProfile.industry, experienceLevel: userProfile.experienceLevel })
                     : Promise.resolve({ recommendedSkills: [] })
             ]);
 
             setGeneratedSummary(summaryResult.linkedinSummary);
+            setGeneratedTitle(`Experienced Software Developer | React, Node.js, TypeScript`); // Placeholder
             setRecommendedSkills(skillsResult.recommendedSkills);
             toast({ title: 'Success', description: 'LinkedIn content generated!' });
 
@@ -143,29 +161,31 @@ export default function LinkedInOptimizerPage() {
 
             <Card className="mb-8">
                 <CardHeader>
-                    <CardTitle>Step 1: Choose Source Resume</CardTitle>
-                    <CardDescription>Select the resume you want to use as a base for your LinkedIn profile.</CardDescription>
+                    <CardTitle>Choose Source Resume</CardTitle>
+                    <CardDescription>Select a saved resume or upload a new one to generate your LinkedIn content.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {isLoading && <Loader2 className="h-6 w-6 animate-spin" />}
-                        {resumes.map(resume => (
-                            <Card 
-                                key={resume.id} 
-                                className={`p-4 cursor-pointer flex justify-between items-center ${selectedResumeId === resume.id ? 'border-primary ring-2 ring-primary' : ''}`}
-                                onClick={() => setSelectedResumeId(resume.id)}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <FileText className="h-6 w-6 text-primary" />
-                                    <p className="font-semibold">{resume.id}</p>
-                                </div>
-                                {selectedResumeId === resume.id && <CheckCircle className="h-5 w-5 text-green-500" />}
-                            </Card>
-                        ))}
-                         {resumes.length === 0 && !isLoading && <p className="text-sm text-muted-foreground">No resumes found.</p>}
+                     <div className="grid md:grid-cols-2 gap-8">
+                        <div className="p-4 border-2 border-dashed rounded-lg text-center">
+                            <FileUp className="h-8 w-8 text-muted-foreground mb-2 mx-auto" />
+                            <Button variant="outline" asChild><label className="cursor-pointer">Upload Resume<input type="file" className="sr-only" onChange={handleFileChange} accept=".docx,.txt" /></label></Button>
+                            {fileName && <p className="text-sm text-green-500 mt-2">Uploaded: {fileName}</p>}
+                            <p className="text-xs text-muted-foreground mt-1">Supports: DOCX, TXT</p>
+                        </div>
+                         <div className="space-y-2">
+                             <h4 className="font-semibold text-center mb-2">Or Select a Saved Resume</h4>
+                            {isLoading && <Loader2 className="h-6 w-6 animate-spin mx-auto" />}
+                            {resumes.map(resume => (
+                                <Card key={resume.id} onClick={() => handleSelectResume(resume.id)} className={`p-3 cursor-pointer flex justify-between items-center transition-colors ${selectedSource === resume.id ? 'border-primary ring-2 ring-primary' : 'hover:bg-muted/50'}`}>
+                                    <div className="flex items-center gap-3"><FileText className="h-6 w-6 text-primary" /><p className="font-semibold">{resume.id}</p></div>
+                                    {selectedSource === resume.id && <CheckCircle className="h-5 w-5 text-green-500" />}
+                                </Card>
+                            ))}
+                            {resumes.length === 0 && !isLoading && <p className="text-sm text-muted-foreground text-center">No saved resumes found.</p>}
+                        </div>
                     </div>
                      <div className="text-center pt-4">
-                         <Button size="lg" onClick={handleGenerate} disabled={isGenerating || !selectedResumeId}>
+                         <Button size="lg" onClick={handleGenerate} disabled={isGenerating || !selectedResumeText}>
                             {isGenerating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             <Sparkles className="mr-2" /> Generate LinkedIn Content
                         </Button>
@@ -181,32 +201,33 @@ export default function LinkedInOptimizerPage() {
                             <CardTitle className="flex items-center gap-2"><Linkedin /> Generated LinkedIn Sections</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-6">
-                            {/* About Section */}
+                            
+                             <Card className="p-4 bg-background">
+                                <h3 className="font-semibold mb-2">Generated Headline</h3>
+                                <Textarea value={generatedTitle} rows={2} readOnly />
+                                <div className="flex justify-end items-center mt-2">
+                                    <Button variant="secondary" size="sm" onClick={() => copyToClipboard(generatedTitle)}><Copy className="mr-2" /> Copy</Button>
+                                </div>
+                            </Card>
+
                             <Card className="p-4 bg-background">
                                 <h3 className="font-semibold mb-2">Generated "About" Section</h3>
                                 <Textarea value={generatedSummary} rows={12} readOnly />
                                 <div className="flex justify-end items-center mt-2">
-                                    <Button variant="secondary" size="sm" onClick={() => copyToClipboard(generatedSummary)}>
-                                        <Copy className="mr-2" /> Copy Section
-                                    </Button>
+                                    <Button variant="secondary" size="sm" onClick={() => copyToClipboard(generatedSummary)}><Copy className="mr-2" /> Copy</Button>
                                 </div>
                             </Card>
 
-                            {/* Skills Optimization */}
                             <Card className="p-4 bg-background">
                                 <h3 className="font-semibold mb-2">Skills Recommendations</h3>
                                 <p className="text-sm text-muted-foreground mb-4">
                                     Based on your profile's industry ({userProfile.industry || 'N/A'}) and experience ({userProfile.experienceLevel || 'N/A'}).
                                 </p>
-                                <Separator className="my-4" />
-                                <h4 className="text-sm font-semibold mb-2">Suggested Skills to Add:</h4>
                                 <div className="flex flex-wrap gap-2 mb-4">
                                     {recommendedSkills.map(skill => <Badge key={skill} variant="outline">{skill}</Badge>)}
                                 </div>
                                 <div className="flex justify-end items-center mt-2">
-                                     <Button variant="secondary" size="sm" onClick={() => copyToClipboard(recommendedSkills.join(', '))}>
-                                        <Copy className="mr-2" /> Copy Skills
-                                    </Button>
+                                     <Button variant="secondary" size="sm" onClick={() => copyToClipboard(recommendedSkills.join(', '))}><Copy className="mr-2" /> Copy Skills</Button>
                                 </div>
                             </Card>
                         </CardContent>
