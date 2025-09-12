@@ -48,11 +48,7 @@ const extractTextFromFileFlow = ai.defineFlow(
     } else if (mimeType.startsWith('text/')) {
         text = buffer.toString('utf-8');
     } else {
-        // Temporarily throw error for PDFs until a stable library is found
-        if (mimeType === 'application/pdf') {
-            throw new Error('PDF processing is temporarily unavailable. Please use a .docx or .txt file.');
-        }
-        throw new Error(`Unsupported file type: ${mimeType}`);
+        throw new Error(`Unsupported file type: ${mimeType}. Please use a .docx or .txt file.`);
     }
 
     return { text };
