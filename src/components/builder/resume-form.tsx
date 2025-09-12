@@ -56,7 +56,7 @@ export function ResumeForm() {
             ...prev,
             extras: {
                 ...prev.extras,
-                [field]: prev.extras?.[field]?.map((item, i) => i === index ? value : item) ?? [value]
+                [field]: (prev.extras?.[field] ?? []).map((item, i) => i === index ? value : item)
             }
         }));
     };
@@ -165,7 +165,7 @@ export function ResumeForm() {
                                 <Label className="text-xs text-muted-foreground">Email</Label>
                                 <Input placeholder="john.doe@email.com" value={resumeData.personal.email} onChange={e => handleChange('personal', 'email', e.target.value)} />
                             </div>
-                             <div>_
+                             <div>
                                 <Label className="text-xs text-muted-foreground">Phone</Label>
                                 <Input placeholder="123-456-7890" value={resumeData.personal.phone} onChange={e => handleChange('personal', 'phone', e.target.value)} />
                             </div>
@@ -215,11 +215,12 @@ export function ResumeForm() {
                     <AccordionContent className="p-4 pt-0">
                         <div className="space-y-4">
                             <div>
-                                <Label className="text-xs text-muted-foreground">Technical Skills (comma separated)</Label>
-                                <Input 
-                                    placeholder="React, Node.js, Python" 
-                                    value={resumeData.skills.technical.join(', ')} 
-                                    onChange={e => handleSkillsChange(e.target.value)} 
+                                <Label className="text-xs text-muted-foreground">Technical Skills (use categories like "Frontend: React, ...")</Label>
+                                <Textarea 
+                                    placeholder="Frontend: React, Node.js..." 
+                                    value={resumeData.skills.technical.join('\n')} 
+                                    onChange={e => setResumeData(prev => ({...prev, skills: { ...prev.skills, technical: e.target.value.split('\n')}}))}
+                                    rows={6}
                                 />
                             </div>
                         </div>
@@ -358,6 +359,31 @@ export function ResumeForm() {
                     </AccordionContent>
                 </AccordionItem>
 
+                 {/* Awards */}
+                 <AccordionItem value="awards" className="bg-card border-none rounded-lg">
+                    <AccordionTrigger className="p-4 hover:no-underline">
+                        <div className="flex items-center gap-3">
+                            <Trophy className="h-5 w-5" />
+                            <span className="font-semibold">Awards</span>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="p-4 pt-0">
+                       <div className="space-y-4">
+                            {(resumeData.extras?.awards || []).map((award, index) => (
+                                <Card key={index} className="p-4 bg-background flex items-center gap-2">
+                                    <Input placeholder="Company Hackathon Winner" value={award} onChange={e => handleExtrasChange('awards', index, e.target.value)} />
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => removeFromExtras('awards', index)}>
+                                        <Trash2 className="h-4 w-4"/>
+                                    </Button>
+                                </Card>
+                            ))}
+                            <Button variant="outline" className="w-full mt-2" onClick={() => addToExtras('awards')}>
+                                <PlusCircle className="mr-2"/> Add Award
+                            </Button>
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+
                  {/* Interests */}
                 <AccordionItem value="interests" className="bg-card border-none rounded-lg">
                     <AccordionTrigger className="p-4 hover:no-underline">
@@ -382,20 +408,6 @@ export function ResumeForm() {
                         </div>
                     </AccordionContent>
                 </AccordionItem>
-
-                 {/* Custom Section */}
-                 <AccordionItem value="custom" className="bg-card border-none rounded-lg">
-                    <AccordionTrigger className="p-4 hover:no-underline">
-                        <div className="flex items-center gap-3">
-                            <Sparkles className="h-5 w-5" />
-                            <span className="font-semibold">Custom Section</span>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="p-4 pt-0">
-                       <p className="text-sm text-muted-foreground text-center p-4">Custom section functionality coming soon!</p>
-                    </AccordionContent>
-                </AccordionItem>
-
             </Accordion>
         </div>
     )

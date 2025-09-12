@@ -3,7 +3,7 @@ import { ResumeData } from '@/types/resume';
 import { Mail, Phone, MapPin, Linkedin, Github } from 'lucide-react';
 
 export function Template2_Modern({ data }: { data: ResumeData }) {
-    const { personal, summary, skills, work, projects, education, certifications } = data;
+    const { personal, summary, skills, work, projects, education, certifications, extras } = data;
     return (
         <div className="p-8 bg-white text-gray-700 font-serif text-sm" id="resume-content">
             <header className="mb-6 pb-4 border-b-2 border-purple-600">
@@ -24,7 +24,9 @@ export function Template2_Modern({ data }: { data: ResumeData }) {
             
             <section className="mb-5">
                 <h2 className="text-purple-800 font-bold text-sm tracking-widest uppercase mb-2">Skills</h2>
-                 <p className="text-sm">{skills.technical.join(' • ')}</p>
+                {skills.technical.map((line, index) => (
+                    <p key={index} className="text-sm">{line}</p>
+                ))}
             </section>
 
             <section className="mb-5">
@@ -65,11 +67,27 @@ export function Template2_Modern({ data }: { data: ResumeData }) {
             </section>
 
             {certifications && certifications.length > 0 && (
-                <section>
+                <section className="mb-5">
                     <h2 className="text-purple-800 font-bold text-sm tracking-widest uppercase mb-2">Certifications</h2>
                     <ul className="list-disc list-inside text-sm">
                         {certifications.map(cert => <li key={cert}>{cert}</li>)}
                     </ul>
+                </section>
+            )}
+
+            {extras?.awards && extras.awards.length > 0 && (
+                <section className="mb-5">
+                    <h2 className="text-purple-800 font-bold text-sm tracking-widest uppercase mb-2">Awards</h2>
+                    <ul className="list-disc list-inside text-sm">
+                        {extras.awards.map(award => <li key={award}>{award}</li>)}
+                    </ul>
+                </section>
+            )}
+
+            {extras?.interests && extras.interests.length > 0 && (
+                <section>
+                    <h2 className="text-purple-800 font-bold text-sm tracking-widest uppercase mb-2">Interests</h2>
+                     <p className="text-sm">{extras.interests.join(', ')}</p>
                 </section>
             )}
         </div>

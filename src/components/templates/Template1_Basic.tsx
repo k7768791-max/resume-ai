@@ -2,15 +2,15 @@
 import { ResumeData } from '@/types/resume';
 
 export function Template1_Basic({ data }: { data: ResumeData }) {
-    const { personal, summary, skills, work, projects, education } = data;
+    const { personal, summary, skills, work, projects, education, certifications, extras } = data;
     return (
         <div className="p-8 bg-white text-gray-800 font-sans text-sm" id="resume-content">
             <header className="text-center mb-6">
                 <h1 className="text-3xl font-bold tracking-wider">{personal.fullName.toUpperCase()}</h1>
                 <p className="text-xs">
                     {personal.email} | {personal.phone} | {personal.location}
-                    {personal.linkedin && ` | linkedin.com/in/${personal.linkedin}`}
-                    {personal.github && ` | github.com/${personal.github}`}
+                    {personal.linkedin && ` | ${personal.linkedin}`}
+                    {personal.github && ` | ${personal.github}`}
                 </p>
             </header>
 
@@ -21,11 +21,9 @@ export function Template1_Basic({ data }: { data: ResumeData }) {
 
             <section className="mb-4">
                 <h2 className="text-lg font-bold border-b-2 border-gray-300 pb-1 mb-2">SKILLS</h2>
-                <div className="flex flex-wrap gap-2">
-                    {skills.technical.map(skill => (
-                        <span key={skill} className="bg-gray-200 px-2 py-1 rounded-sm">{skill}</span>
-                    ))}
-                </div>
+                {skills.technical.map((line, index) => (
+                    <p key={index} className="text-sm">{line}</p>
+                ))}
             </section>
 
             <section className="mb-4">
@@ -52,7 +50,7 @@ export function Template1_Basic({ data }: { data: ResumeData }) {
                 ))}
             </section>
 
-            <section>
+            <section className="mb-4">
                 <h2 className="text-lg font-bold border-b-2 border-gray-300 pb-1 mb-2">EDUCATION</h2>
                 {education.map((edu, index) => (
                     <div key={index} className="flex justify-between items-baseline">
@@ -64,6 +62,31 @@ export function Template1_Basic({ data }: { data: ResumeData }) {
                     </div>
                 ))}
             </section>
+
+            {certifications && certifications.length > 0 && (
+                <section className="mb-4">
+                    <h2 className="text-lg font-bold border-b-2 border-gray-300 pb-1 mb-2">CERTIFICATIONS</h2>
+                    <ul className="list-disc list-inside">
+                        {certifications.map(cert => <li key={cert}>{cert}</li>)}
+                    </ul>
+                </section>
+            )}
+
+            {extras?.awards && extras.awards.length > 0 && (
+                <section className="mb-4">
+                    <h2 className="text-lg font-bold border-b-2 border-gray-300 pb-1 mb-2">AWARDS</h2>
+                    <ul className="list-disc list-inside">
+                        {extras.awards.map(award => <li key={award}>{award}</li>)}
+                    </ul>
+                </section>
+            )}
+
+            {extras?.interests && extras.interests.length > 0 && (
+                <section>
+                    <h2 className="text-lg font-bold border-b-2 border-gray-300 pb-1 mb-2">INTERESTS</h2>
+                     <p>{extras.interests.join(', ')}</p>
+                </section>
+            )}
         </div>
     );
 }

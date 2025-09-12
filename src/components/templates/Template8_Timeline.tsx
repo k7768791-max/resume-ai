@@ -2,7 +2,7 @@
 import { ResumeData } from '@/types/resume';
 
 export function Template8_Timeline({ data }: { data: ResumeData }) {
-    const { personal, summary, skills, work, projects, education } = data;
+    const { personal, summary, skills, work, projects, education, certifications, extras } = data;
     return (
         <div className="p-8 bg-white text-gray-800 font-sans" id="resume-content">
             <header className="text-center mb-8">
@@ -17,7 +17,11 @@ export function Template8_Timeline({ data }: { data: ResumeData }) {
 
             <section className="mb-6">
                 <h2 className="font-bold text-sm uppercase tracking-wider text-gray-500 mb-3 text-center">Skills</h2>
-                <p className="text-sm text-center">{skills.technical.join(' • ')}</p>
+                <div className="text-sm text-center">
+                    {skills.technical.map((line, index) => (
+                        <p key={index}>{line}</p>
+                    ))}
+                </div>
             </section>
 
             <section className="mb-6">
@@ -47,7 +51,7 @@ export function Template8_Timeline({ data }: { data: ResumeData }) {
                 ))}
             </section>
             
-            <section>
+            <section className="mb-6">
                 <h2 className="font-bold text-lg uppercase tracking-wider text-gray-700 mb-4">Education</h2>
                 {education.map((edu, index) => (
                      <div key={index} className="text-sm mb-2">
@@ -59,6 +63,31 @@ export function Template8_Timeline({ data }: { data: ResumeData }) {
                     </div>
                 ))}
             </section>
+
+            {certifications && certifications.length > 0 && (
+                <section className="mb-6">
+                    <h2 className="font-bold text-lg uppercase tracking-wider text-gray-700 mb-4">Certifications</h2>
+                    <ul className="list-disc list-inside text-sm">
+                        {certifications.map(cert => <li key={cert}>{cert}</li>)}
+                    </ul>
+                </section>
+            )}
+
+            {extras?.awards && extras.awards.length > 0 && (
+                <section className="mb-6">
+                    <h2 className="font-bold text-lg uppercase tracking-wider text-gray-700 mb-4">Awards</h2>
+                    <ul className="list-disc list-inside text-sm">
+                        {extras.awards.map(award => <li key={award}>{award}</li>)}
+                    </ul>
+                </section>
+            )}
+
+            {extras?.interests && extras.interests.length > 0 && (
+                <section>
+                    <h2 className="font-bold text-lg uppercase tracking-wider text-gray-700 mb-4">Interests</h2>
+                     <p className="text-sm">{extras.interests.join(', ')}</p>
+                </section>
+            )}
         </div>
     );
 }

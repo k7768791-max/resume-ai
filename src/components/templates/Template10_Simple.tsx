@@ -22,7 +22,9 @@ export function Template10_Simple({ data }: { data: ResumeData }) {
             <br />
             <p className="font-bold text-sm uppercase tracking-wider">Skills</p>
             <hr className="border-black my-1"/>
-            <p>{skills.technical.join(', ')}</p>
+            {skills.technical.map((line, index) => (
+                <p key={index}>{line}</p>
+            ))}
 
             <br />
             <p className="font-bold text-sm uppercase tracking-wider">Experience</p>
@@ -69,6 +71,26 @@ export function Template10_Simple({ data }: { data: ResumeData }) {
                     {certifications.map((cert, index) => (
                         <p key={index} className="my-1">{cert}</p>
                     ))}
+                </>
+            )}
+
+            {extras?.awards && extras.awards.length > 0 && (
+                <>
+                    <br />
+                    <p className="font-bold text-sm uppercase tracking-wider">Awards</p>
+                    <hr className="border-black my-1"/>
+                    {extras.awards.map((award, index) => (
+                        <p key={index} className="my-1">{award}</p>
+                    ))}
+                </>
+            )}
+
+            {extras?.interests && extras.interests.length > 0 && (
+                 <>
+                    <br />
+                    <p className="font-bold text-sm uppercase tracking-wider">Interests</p>
+                    <hr className="border-black my-1"/>
+                    <p>{extras.interests.join(', ')}</p>
                 </>
             )}
         </div>

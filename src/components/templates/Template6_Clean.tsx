@@ -2,7 +2,7 @@
 import { ResumeData } from '@/types/resume';
 
 export function Template6_Clean({ data }: { data: ResumeData }) {
-    const { personal, summary, skills, work, projects, education } = data;
+    const { personal, summary, skills, work, projects, education, certifications, extras } = data;
     return (
         <div className="p-8 bg-white text-gray-700 font-light font-sans text-sm" id="resume-content">
             <header className="mb-8 text-center">
@@ -17,7 +17,9 @@ export function Template6_Clean({ data }: { data: ResumeData }) {
 
             <section className="mb-6">
                 <h2 className="text-base font-semibold tracking-wider border-b border-gray-200 pb-1 mb-2">SKILLS</h2>
-                <p className="text-sm">{skills.technical.join(', ')}</p>
+                {skills.technical.map((line, index) => (
+                    <p key={index} className="text-sm">{line}</p>
+                ))}
             </section>
 
             <section className="mb-6">
@@ -56,6 +58,31 @@ export function Template6_Clean({ data }: { data: ResumeData }) {
                     </div>
                 ))}
             </section>
+
+            {certifications && certifications.length > 0 && (
+                 <section className="mb-6">
+                    <h2 className="text-base font-semibold tracking-wider border-b border-gray-200 pb-1 mb-2">CERTIFICATIONS</h2>
+                    <ul className="list-disc list-inside text-sm">
+                        {certifications.map(cert => <li key={cert}>{cert}</li>)}
+                    </ul>
+                </section>
+            )}
+
+            {extras?.awards && extras.awards.length > 0 && (
+                <section className="mb-6">
+                    <h2 className="text-base font-semibold tracking-wider border-b border-gray-200 pb-1 mb-2">AWARDS</h2>
+                    <ul className="list-disc list-inside text-sm">
+                        {extras.awards.map(award => <li key={award}>{award}</li>)}
+                    </ul>
+                </section>
+            )}
+
+            {extras?.interests && extras.interests.length > 0 && (
+                <section>
+                    <h2 className="text-base font-semibold tracking-wider border-b border-gray-200 pb-1 mb-2">INTERESTS</h2>
+                     <p className="text-sm">{extras.interests.join(', ')}</p>
+                </section>
+            )}
         </div>
     );
 }

@@ -2,7 +2,7 @@
 import { ResumeData } from '@/types/resume';
 
 export function Template3_Elegant({ data }: { data: ResumeData }) {
-    const { personal, summary, skills, work, projects, education } = data;
+    const { personal, summary, skills, work, projects, education, certifications, extras } = data;
     return (
         <div className="p-8 bg-gray-50 text-gray-800 font-serif" id="resume-content">
             <header className="text-center mb-8">
@@ -21,7 +21,11 @@ export function Template3_Elegant({ data }: { data: ResumeData }) {
 
              <section className="mb-6">
                 <h2 className="text-center text-sm font-bold tracking-widest uppercase text-gray-500 mb-3">Core Competencies</h2>
-                <p className="text-center text-sm text-gray-700">{skills.technical.join(' | ')}</p>
+                <div className="text-center text-sm text-gray-700">
+                    {skills.technical.map((line, index) => (
+                        <p key={index}>{line}</p>
+                    ))}
+                </div>
             </section>
 
             <section className="mb-6">
@@ -57,6 +61,31 @@ export function Template3_Elegant({ data }: { data: ResumeData }) {
                     </div>
                 ))}
             </section>
+
+            {certifications && certifications.length > 0 && (
+                <section className="mb-6">
+                    <h2 className="text-center text-sm font-bold tracking-widest uppercase text-gray-500 mb-3">Certifications</h2>
+                    <div className="text-center text-sm">
+                        {certifications.map(cert => <p key={cert}>{cert}</p>)}
+                    </div>
+                </section>
+            )}
+
+            {extras?.awards && extras.awards.length > 0 && (
+                <section className="mb-6">
+                    <h2 className="text-center text-sm font-bold tracking-widest uppercase text-gray-500 mb-3">Awards</h2>
+                    <div className="text-center text-sm">
+                        {extras.awards.map(award => <p key={award}>{award}</p>)}
+                    </div>
+                </section>
+            )}
+
+            {extras?.interests && extras.interests.length > 0 && (
+                <section>
+                    <h2 className="text-center text-sm font-bold tracking-widest uppercase text-gray-500 mb-3">Interests</h2>
+                     <p className="text-center text-sm">{extras.interests.join(', ')}</p>
+                </section>
+            )}
         </div>
     );
 }

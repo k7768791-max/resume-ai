@@ -2,7 +2,7 @@
 import { ResumeData } from '@/types/resume';
 
 export function Template9_Academic({ data }: { data: ResumeData }) {
-    const { personal, summary, skills, work, projects, education, certifications } = data;
+    const { personal, summary, skills, work, projects, education, certifications, extras } = data;
     return (
         <div className="p-8 bg-white text-gray-800 font-serif text-sm" id="resume-content">
             <header className="text-center mb-6">
@@ -56,16 +56,35 @@ export function Template9_Academic({ data }: { data: ResumeData }) {
 
              <section className="mb-4">
                 <h2 className="text-lg font-bold border-b pb-1">SKILLS</h2>
-                <p className="mt-2"><strong>Technical:</strong> {skills.technical.join(', ')}</p>
-                {skills.soft && skills.soft.length > 0 && <p><strong>Soft:</strong> {skills.soft.join(', ')}</p>}
+                <div className="mt-2">
+                    {skills.technical.map((line, index) => (
+                        <p key={index}>{line}</p>
+                    ))}
+                </div>
             </section>
 
             {certifications && certifications.length > 0 && (
-                <section>
+                <section className="mb-4">
                     <h2 className="text-lg font-bold border-b pb-1">CERTIFICATIONS</h2>
                     <ul className="list-disc list-inside mt-2">
                         {certifications.map(cert => <li key={cert}>{cert}</li>)}
                     </ul>
+                </section>
+            )}
+
+            {extras?.awards && extras.awards.length > 0 && (
+                <section className="mb-4">
+                    <h2 className="text-lg font-bold border-b pb-1">AWARDS</h2>
+                    <ul className="list-disc list-inside mt-2">
+                        {extras.awards.map(award => <li key={award}>{award}</li>)}
+                    </ul>
+                </section>
+            )}
+
+            {extras?.interests && extras.interests.length > 0 && (
+                <section>
+                    <h2 className="text-lg font-bold border-b pb-1">INTERESTS</h2>
+                     <p className="mt-2">{extras.interests.join(', ')}</p>
                 </section>
             )}
         </div>
