@@ -116,7 +116,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between space-y-2">
             <div>
                 <h1 className="text-3xl font-bold font-headline tracking-tight">Dashboard</h1>
-                <p className="text-muted-foreground">Welcome back, <span className='font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent'>{user?.displayName || 'User'}</span>! 👋 Ready to optimize your job search?</p>
+                <p className="text-muted-foreground">Welcome back, <span className='font-bold font-weight:500 text-xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent'>{user?.displayName || 'User'}</span>! 👋 Ready to optimize your job search?</p>
             </div>
         </div>
         
