@@ -167,9 +167,9 @@ export default function LinkedInOptimizerPage() {
                      <div className="grid md:grid-cols-2 gap-8">
                         <div className="p-4 border-2 border-dashed rounded-lg text-center">
                             <FileUp className="h-8 w-8 text-muted-foreground mb-2 mx-auto" />
-                            <Button variant="outline" asChild><label className="cursor-pointer">Upload Resume<input type="file" className="sr-only" onChange={handleFileChange} accept=".docx,.txt" /></label></Button>
+                            <Button variant="outline" asChild><label className="cursor-pointer">Upload Resume<input type="file" className="sr-only" onChange={handleFileChange} accept=".docx,.pdf,.txt" /></label></Button>
                             {fileName && <p className="text-sm text-green-500 mt-2">Uploaded: {fileName}</p>}
-                            <p className="text-xs text-muted-foreground mt-1">Supports: DOCX, TXT</p>
+                            <p className="text-xs text-muted-foreground mt-1">Supports: DOCX, PDF, TXT</p>
                         </div>
                          <div className="space-y-2">
                              <h4 className="font-semibold text-center mb-2">Or Select a Saved Resume</h4>
