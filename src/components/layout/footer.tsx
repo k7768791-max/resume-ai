@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Logo } from '../icons';
 import { Button } from '../ui/button';
 import { Mail, Twitter, Facebook } from 'lucide-react';
+import { ThemeToggle } from '../theme-toggle';
 
 export function Footer() {
   return (
@@ -43,7 +44,7 @@ export function Footer() {
         <div className="mt-8 pt-8 border-t flex flex-col sm:flex-row justify-between items-center gap-4">
           <p className="text-sm text-muted-foreground">&copy; {new Date().getFullYear()} ResumeAI. All rights reserved.</p>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" asChild>
+             <Button variant="ghost" size="icon" asChild>
               <Link href="mailto:support@resumeai.com"><Mail className="h-4 w-4" /></Link>
             </Button>
             <Button variant="ghost" size="icon" asChild>
@@ -52,6 +53,7 @@ export function Footer() {
             <Button variant="ghost" size="icon" asChild>
               <Link href="#"><Facebook className="h-4 w-4" /></Link>
             </Button>
+            <ThemeToggle />
           </div>
         </div>
       </div>
