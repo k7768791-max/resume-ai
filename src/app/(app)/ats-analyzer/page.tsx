@@ -204,7 +204,7 @@ export default function AtsAnalyzerPage() {
                                 </div>
                             </div>
                         </div>
-                        <div className="space-y-4">
+                        <div className="space-y-4 mb-3">
                              <h3 className="font-semibold">Step 2: Add Job Description</h3>
                             <Label htmlFor="job-description" className="sr-only">Job Description</Label>
                             <Textarea 
@@ -216,7 +216,7 @@ export default function AtsAnalyzerPage() {
                             />
                         </div>
                     </CardContent>
-                    <div className="p-6 pt-0 text-center">
+                    <div className=" m-5 p-6 pt-0 text-center">
                         <Button size="lg" onClick={handleAnalyze} disabled={isLoading || !resumeText || !jobDescription}>
                              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Analyze Resume

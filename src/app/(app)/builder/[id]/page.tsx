@@ -71,11 +71,11 @@ function BuilderPageContent({ resumeId }: { resumeId: string }) {
                     <ExportButton />
                 </div>
             </header>
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-8 p-4 md:p-8 overflow-y-auto bg-gray-100 dark:bg-gray-900">
-                <div className="lg:col-span-1 overflow-y-auto">
+            <div className="flex-1 grid grid-cols-1 lg:grid-cols-5 gap-8 p-4 md:p-8 overflow-y-auto bg-gray-100 dark:bg-gray-900">
+                <div className="lg:col-span-2 overflow-y-auto">
                     <ResumeForm />
                 </div>
-                <div className="lg:col-span-1 overflow-y-auto">
+                <div className="lg:col-span-3 overflow-y-auto">
                     <ResumePreview />
                 </div>
             </div>
