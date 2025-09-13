@@ -225,6 +225,7 @@ export default function ProfilePage() {
                                                     <SelectItem value="data-science">Data Science</SelectItem>
                                                     <SelectItem value="product-management">Product Management</SelectItem>
                                                     <SelectItem value="design">Design/UX</SelectItem>
+                                                    <SelectItem value.
                                                     <SelectItem value="marketing">Marketing</SelectItem>
                                                 </SelectContent>
                                             </Select>
@@ -255,7 +256,7 @@ export default function ProfilePage() {
                         <TabsContent value="subscription">
                             <Card>
                                 <CardHeader>
-                                    <CardTitle>Subscription & Billing</CardTitle>
+                                    <CardTitle>Subscription &amp; Billing</CardTitle>
                                     <CardDescription>Manage your plan, billing details, and view usage.</CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-8">
@@ -332,7 +333,7 @@ export default function ProfilePage() {
                         <TabsContent value="privacy">
                             <Card>
                                 <CardHeader><CardTitle>Privacy</CardTitle></CardHeader>
-                                <CardContent><p>Privacy settings will be here.</p></content>
+                                <CardContent><p>Privacy settings will be here.</p></CardContent>
                             </Card>
                         </TabsContent>
                     </Tabs>
@@ -340,6 +341,5 @@ export default function ProfilePage() {
             )}
         </div>
     );
-}
 
     
