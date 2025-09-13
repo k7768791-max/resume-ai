@@ -15,7 +15,6 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import mammoth from 'mammoth';
-import pdf from 'pdf-parse';
 
 const ExtractTextFromFileInputSchema = z.object({
     fileDataUri: z.string().describe("The file content as a data URI. Expected format: 'data:<mimetype>;base64,<encoded_data>'."),
@@ -32,6 +31,21 @@ export async function extractTextFromFile(input: ExtractTextFromFileInput): Prom
   return extractTextFromFileFlow(input);
 }
 
+const pdfExtractionPrompt = ai.definePrompt(
+    {
+      name: 'pdfExtractionPrompt',
+      input: {
+        schema: z.object({
+          fileDataUri: z.string(),
+        }),
+      },
+      prompt: `You are an expert Optical Character Recognition (OCR) system. Extract all text content from the provided file. Do not summarize, analyze, or alter the content in any way. Return only the raw text.
+    
+    File: {{media url=fileDataUri}}`,
+    },
+);
+
+
 const extractTextFromFileFlow = ai.defineFlow(
   {
     name: 'extractTextFromFileFlow',
@@ -39,17 +53,19 @@ const extractTextFromFileFlow = ai.defineFlow(
     outputSchema: ExtractTextFromFileOutputSchema,
   },
   async ({ fileDataUri, mimeType }) => {
-    const base64Data = fileDataUri.split(',')[1];
-    const buffer = Buffer.from(base64Data, 'base64');
     let text = '';
 
     if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        const base64Data = fileDataUri.split(',')[1];
+        const buffer = Buffer.from(base64Data, 'base64');
         const { value } = await mammoth.extractRawText({ buffer });
         text = value;
     } else if (mimeType === 'application/pdf') {
-        const data = await pdf(buffer);
-        text = data.text;
+        const result = await pdfExtractionPrompt({ fileDataUri });
+        text = result.text;
     } else if (mimeType.startsWith('text/')) {
+        const base64Data = fileDataUri.split(',')[1];
+        const buffer = Buffer.from(base64Data, 'base64');
         text = buffer.toString('utf-8');
     } else {
         throw new Error(`Unsupported file type: ${mimeType}. Please use a .docx, .pdf or .txt file.`);
