@@ -111,8 +111,8 @@ export default function ProfilePage() {
     const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files || !user) return;
         const file = e.target.files[0];
-        if (file.size > 2 * 1024 * 1024) { // 2MB limit
-            toast({ variant: 'destructive', title: 'Error', description: 'File size must be less than 2MB.' });
+        if (file.size > 15 * 1024 * 1024) { // 15MB limit
+            toast({ variant: 'destructive', title: 'Error', description: 'File size must be less than 15MB.' });
             return;
         }
         setIsUploading(true);
@@ -334,10 +334,12 @@ export default function ProfilePage() {
                  <TabsContent value="privacy">
                      <Card>
                         <CardHeader><CardTitle>Privacy</CardTitle></CardHeader>
-                        <CardContent><p>Privacy settings will be here.</p></CardContent>
+                        <CardContent><p>Privacy settings will be here.</p></content>
                     </Card>
                 </TabsContent>
             </Tabs>
         </div>
     );
 }
+
+    
