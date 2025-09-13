@@ -44,14 +44,17 @@ export function LandingHeader() {
         isScrolled ? 'bg-background/80 backdrop-blur-sm border-b' : 'bg-transparent'
       )}
     >
-      <div className="container flex h-16 items-center">
-        <Link href="/" className="mr-6 flex items-center gap-2">
-          <Logo className="h-6 w-6 text-primary" />
-          <span className="hidden font-bold sm:inline-block font-headline text-lg">
-            ResumeAI
-          </span>
-        </Link>
-        <nav className="hidden items-center gap-6 text-sm md:flex">
+      <div className="container flex h-16 items-center justify-between">
+        <div className="flex items-center">
+          <Link href="/" className="mr-6 flex items-center gap-2">
+            <Logo className="h-6 w-6 text-primary" />
+            <span className="hidden font-bold sm:inline-block font-headline text-lg">
+              ResumeAI
+            </span>
+          </Link>
+        </div>
+
+        <nav className="hidden items-center justify-center gap-6 text-sm md:flex absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
           {navLinks.map((link) => (
             <Link
               key={link.href}
@@ -65,7 +68,8 @@ export function LandingHeader() {
             </Link>
           ))}
         </nav>
-        <div className="flex flex-1 items-center justify-end gap-4">
+
+        <div className="flex items-center gap-4">
           <nav className="hidden items-center gap-2 md:flex">
             <Button variant="ghost" asChild>
               <Link href="/auth/login">Login</Link>
