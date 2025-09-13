@@ -168,10 +168,10 @@ export default function AtsAnalyzerPage() {
                                 <Button variant="outline" asChild>
                                     <label htmlFor="resume-upload" className="cursor-pointer">
                                         Choose File
-                                        <input id="resume-upload" type="file" className="sr-only" onChange={handleFileChange} accept=".docx,.txt,.pdf" />
+                                        <input id="resume-upload" type="file" className="sr-only" onChange={handleFileChange} accept=".docx,.txt" />
                                     </label>
                                 </Button>
-                                <p className="text-xs text-muted-foreground mt-2">Supports: DOCX, PDF, TXT</p>
+                                <p className="text-xs text-muted-foreground mt-2">Supports: DOCX, TXT</p>
                                 {fileName && <p className="text-sm text-green-500 mt-2">Uploaded: {fileName}</p>}
                             </div>
 
@@ -272,3 +272,5 @@ export default function AtsAnalyzerPage() {
         </div>
     );
 }
+
+    

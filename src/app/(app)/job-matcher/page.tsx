@@ -157,9 +157,9 @@ export default function JobMatcherPage() {
                         <h3 className="font-semibold">Step 1: Choose Resume</h3>
                          <div className="p-4 border-2 border-dashed rounded-lg text-center">
                             <FileUp className="h-8 w-8 text-muted-foreground mb-2 mx-auto" />
-                            <Button variant="outline" asChild><label className="cursor-pointer">Upload Resume<input type="file" className="sr-only" onChange={handleFileChange} accept=".docx,.txt,.pdf" /></label></Button>
+                            <Button variant="outline" asChild><label className="cursor-pointer">Upload Resume<input type="file" className="sr-only" onChange={handleFileChange} accept=".docx,.txt" /></label></Button>
                             {fileName && <p className="text-sm text-green-500 mt-2">Uploaded: {fileName}</p>}
-                            <p className="text-xs text-muted-foreground mt-1">Supports: DOCX, PDF, TXT</p>
+                            <p className="text-xs text-muted-foreground mt-1">Supports: DOCX, TXT</p>
                         </div>
                          <div className="relative"><div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">Or</span></div></div>
                          <div className="space-y-2">
@@ -243,3 +243,5 @@ export default function JobMatcherPage() {
         </div>
     );
 }
+
+    

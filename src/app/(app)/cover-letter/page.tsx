@@ -162,11 +162,11 @@ export default function CoverLetterPage() {
                                 <Button variant="outline" asChild>
                                     <label className="cursor-pointer">
                                         Upload New Resume
-                                        <input type="file" className="sr-only" onChange={handleFileChange} accept=".docx,.txt,.pdf" />
+                                        <input type="file" className="sr-only" onChange={handleFileChange} accept=".docx,.txt" />
                                     </label>
                                 </Button>
                                 {fileName && <p className="text-sm text-green-500 mt-2">Uploaded: {fileName}</p>}
-                                <p className="text-xs text-muted-foreground mt-1">Supports: DOCX, PDF, TXT</p>
+                                <p className="text-xs text-muted-foreground mt-1">Supports: DOCX, TXT</p>
                             </div>
                              <div className="relative my-4">
                                 <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
@@ -239,3 +239,5 @@ export default function CoverLetterPage() {
         </div>
     );
 }
+
+    
