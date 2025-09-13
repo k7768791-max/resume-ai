@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,14 +10,14 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BookUser, CreditCard, Edit, Settings, Shield, UserCog, Loader2, Download, Table as TableIcon } from "lucide-react";
+import { BookUser, CreditCard, Edit, Settings, Shield, UserCog, Loader2, Download, Table as TableIcon, Upload } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { auth, db } from '@/lib/firebase';
-import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth, db, storage } from '@/lib/firebase';
+import { onAuthStateChanged, User, updateProfile } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
 
-// Static data that was previously in the component
 const usageStats = [
     { name: 'ATS Analyses', value: 47, max: 100, color: 'bg-primary' },
     { name: 'Resume Exports', value: 23, max: Infinity, color: 'bg-accent' },
@@ -34,12 +34,13 @@ const billingHistory = [
 interface UserProfile {
     fullName: string;
     email: string;
-    phone: string;
-    location: string;
-    linkedin: string;
-    github: string;
-    industry: string;
-    experienceLevel: string;
+    photoURL?: string;
+    phone?: string;
+    location?: string;
+    linkedin?: string;
+    github?: string;
+    industry?: string;
+    experienceLevel?: string;
 }
 
 export default function ProfilePage() {
@@ -47,6 +48,7 @@ export default function ProfilePage() {
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
     const { toast } = useToast();
 
     useEffect(() => {
@@ -69,13 +71,10 @@ export default function ProfilePage() {
             if (docSnap.exists()) {
                 setProfile(docSnap.data() as UserProfile);
             } else {
-                // If no profile, create a default one
                 const defaultProfile: UserProfile = {
-                    fullName: user?.displayName || 'New User',
-                    email: user?.email || '',
-                    phone: '', location: '', linkedin: '', github: '',
-                    industry: 'software-development',
-                    experienceLevel: 'mid'
+                    fullName: auth.currentUser?.displayName || '',
+                    email: auth.currentUser?.email || '',
+                    photoURL: auth.currentUser?.photoURL || '',
                 };
                 setProfile(defaultProfile);
             }
@@ -97,6 +96,7 @@ export default function ProfilePage() {
         if (!user || !profile) return;
         setIsSaving(true);
         try {
+            await updateProfile(user, { displayName: profile.fullName });
             const docRef = doc(db, 'users', user.uid);
             await setDoc(docRef, profile, { merge: true });
             toast({ title: 'Success', description: 'Your profile has been updated.' });
@@ -108,12 +108,43 @@ export default function ProfilePage() {
         }
     };
 
+    const handleImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files || !user) return;
+        const file = e.target.files[0];
+        if (file.size > 2 * 1024 * 1024) { // 2MB limit
+            toast({ variant: 'destructive', title: 'Error', description: 'File size must be less than 2MB.' });
+            return;
+        }
+        setIsUploading(true);
+        const storageRef = ref(storage, `avatars/${user.uid}`);
+        try {
+            const snapshot = await uploadBytes(storageRef, file);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+            
+            await updateProfile(user, { photoURL: downloadURL });
+
+            const docRef = doc(db, 'users', user.uid);
+            await setDoc(docRef, { photoURL: downloadURL }, { merge: true });
+
+            if (profile) {
+                setProfile({ ...profile, photoURL: downloadURL });
+            }
+
+            toast({ title: 'Success', description: 'Profile picture updated.' });
+        } catch (error) {
+            console.error("Error uploading image: ", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to upload image.' });
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
     if (isLoading) {
         return <div className="flex justify-center items-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>;
     }
     
     if (!profile) {
-        return <div className="text-center">Please log in to view your profile.</div>;
+        return <div className="text-center py-10">Please log in to view your profile.</div>;
     }
 
     return (
@@ -124,11 +155,14 @@ export default function ProfilePage() {
                 <CardContent className="p-6 flex flex-col md:flex-row items-center gap-6">
                     <div className="relative">
                         <Avatar className="h-24 w-24">
-                            <AvatarImage src={user?.photoURL || `https://i.pravatar.cc/150?u=${user?.uid}`} alt="User avatar" data-ai-hint="person headshot" />
-                            <AvatarFallback>{profile.fullName.substring(0, 2).toUpperCase()}</AvatarFallback>
+                            <AvatarImage src={profile.photoURL || `https://i.pravatar.cc/150?u=${user?.uid}`} alt="User avatar" />
+                            <AvatarFallback>{profile.fullName?.substring(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
-                        <Button size="icon" variant="outline" className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full">
-                            <Edit className="h-4 w-4" />
+                        <Button size="icon" variant="outline" className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full" asChild>
+                            <Label htmlFor="avatar-upload" className="cursor-pointer">
+                                {isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                                <Input id="avatar-upload" type="file" className="sr-only" onChange={handleImageUpload} accept="image/png, image/jpeg" />
+                            </Label>
                         </Button>
                     </div>
                     <div className="flex-1 text-center md:text-left">
@@ -162,42 +196,44 @@ export default function ProfilePage() {
                             <div className="grid md:grid-cols-2 gap-6">
                                 <div>
                                     <Label htmlFor="fullname">Full Name</Label>
-                                    <Input id="fullname" value={profile.fullName} onChange={e => handleInputChange('fullName', e.target.value)} />
+                                    <Input id="fullname" value={profile.fullName || ''} onChange={e => handleInputChange('fullName', e.target.value)} />
                                 </div>
                                 <div>
                                     <Label htmlFor="email">Email Address</Label>
-                                    <Input id="email" type="email" value={profile.email} onChange={e => handleInputChange('email', e.target.value)} />
+                                    <Input id="email" type="email" value={profile.email || ''} onChange={e => handleInputChange('email', e.target.value)} />
                                 </div>
                                  <div>
                                     <Label htmlFor="phone">Phone Number</Label>
-                                    <Input id="phone" value={profile.phone} onChange={e => handleInputChange('phone', e.target.value)} />
+                                    <Input id="phone" value={profile.phone || ''} onChange={e => handleInputChange('phone', e.target.value)} />
                                 </div>
                                  <div>
                                     <Label htmlFor="location">Location</Label>
-                                    <Input id="location" value={profile.location} onChange={e => handleInputChange('location', e.target.value)} />
+                                    <Input id="location" value={profile.location || ''} onChange={e => handleInputChange('location', e.target.value)} />
                                 </div>
                                  <div>
                                     <Label htmlFor="linkedin">LinkedIn</Label>
-                                    <Input id="linkedin" value={profile.linkedin} onChange={e => handleInputChange('linkedin', e.target.value)} />
+                                    <Input id="linkedin" value={profile.linkedin || ''} onChange={e => handleInputChange('linkedin', e.target.value)} />
                                 </div>
                                  <div>
                                     <Label htmlFor="github">GitHub</Label>
-                                    <Input id="github" value={profile.github} onChange={e => handleInputChange('github', e.target.value)} />
+                                    <Input id="github" value={profile.github || ''} onChange={e => handleInputChange('github', e.target.value)} />
                                 </div>
                                 <div>
                                     <Label htmlFor="industry">Industry</Label>
-                                    <Select value={profile.industry} onValueChange={value => handleInputChange('industry', value)}>
+                                    <Select value={profile.industry || ''} onValueChange={value => handleInputChange('industry', value)}>
                                         <SelectTrigger><SelectValue/></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="software-development">Software Development</SelectItem>
                                             <SelectItem value="data-science">Data Science</SelectItem>
                                             <SelectItem value="product-management">Product Management</SelectItem>
+                                            <SelectItem value="design">Design/UX</SelectItem>
+                                            <SelectItem value="marketing">Marketing</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                  <div>
                                     <Label htmlFor="experience">Experience Level</Label>
-                                     <Select value={profile.experienceLevel} onValueChange={value => handleInputChange('experienceLevel', value)}>
+                                     <Select value={profile.experienceLevel || ''} onValueChange={value => handleInputChange('experienceLevel', value)}>
                                         <SelectTrigger><SelectValue/></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="entry">Entry-level (0-2 years)</SelectItem>
@@ -305,5 +341,3 @@ export default function ProfilePage() {
         </div>
     );
 }
-
-  

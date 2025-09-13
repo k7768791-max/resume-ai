@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { auth } from "@/lib/firebase";
-import { signOut } from "firebase/auth";
+import { signOut, onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
 import { LifeBuoy, LogOut, Settings, User, Menu, Bot, FileText, Home, LayoutTemplate, Linkedin, Target, TrendingUp, Mail } from "lucide-react";
 import { Logo } from "../icons";
 import { cn } from '@/lib/utils';
@@ -31,6 +31,14 @@ export function AppHeader() {
     const pathname = usePathname();
     const { toast } = useToast();
     const [isScrolled, setIsScrolled] = React.useState(false);
+    const [user, setUser] = React.useState<FirebaseUser | null>(null);
+
+    React.useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+            setUser(currentUser);
+        });
+        return () => unsubscribe();
+    }, []);
 
     const handleSignOut = async () => {
         await signOut(auth);
@@ -50,6 +58,11 @@ export function AppHeader() {
         window.removeEventListener('scroll', handleScroll);
         };
     }, []);
+
+    const getInitials = (name: string | null | undefined) => {
+        if (!name) return 'U';
+        return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+    }
 
     return (
         <header className={cn(
@@ -131,8 +144,8 @@ export function AppHeader() {
                                 className="overflow-hidden rounded-full"
                             >
                                 <Avatar>
-                                    <AvatarImage src="https://picsum.photos/100/100" alt="User avatar" data-ai-hint="person headshot" />
-                                    <AvatarFallback>JD</AvatarFallback>
+                                    <AvatarImage src={user?.photoURL || ''} alt="User avatar" />
+                                    <AvatarFallback>{getInitials(user?.displayName)}</AvatarFallback>
                                 </Avatar>
                             </Button>
                         </DropdownMenuTrigger>
@@ -145,11 +158,9 @@ export function AppHeader() {
                                     Profile
                                 </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                                <Link href="/profile">
-                                    <Settings className="mr-2 h-4 w-4" />
-                                    Settings
-                                </Link>
+                            <DropdownMenuItem>
+                                <Settings className="mr-2 h-4 w-4" />
+                                Settings
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                                 <LifeBuoy className="mr-2 h-4 w-4" />

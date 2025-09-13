@@ -13,10 +13,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useState } from 'react';
-import { createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithPopup, updateProfile } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase-db';
+
 
 function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
     return (
@@ -31,7 +34,7 @@ function GoogleIcon(props: React.SVGProps<SVGSVGElement>) {
   }
 
 const formSchema = z.object({
-    fullname: z.string().min(2, { message: "Full name must be at least 2 characters." }),
+    fullName: z.string().min(2, { message: "Full name must be at least 2 characters." }),
     email: z.string().email({ message: "Invalid email address." }),
     password: z.string().min(6, { message: "Password must be at least 6 characters." }),
     confirmPassword: z.string()
@@ -49,7 +52,7 @@ export function SignupForm() {
     const form = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
         defaultValues: {
-          fullname: "",
+          fullName: "",
           email: "",
           password: "",
           confirmPassword: "",
@@ -59,7 +62,17 @@ export function SignupForm() {
     async function onSubmit(values: z.infer<typeof formSchema>) {
         setIsLoading(true);
         try {
-            await createUserWithEmailAndPassword(auth, values.email, values.password);
+            const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+            const user = userCredential.user;
+
+            await updateProfile(user, { displayName: values.fullName });
+
+            const userDocRef = doc(db, 'users', user.uid);
+            await setDoc(userDocRef, {
+                fullName: values.fullName,
+                email: values.email,
+            }, { merge: true });
+
             toast({
               title: "Account Created!",
               description: "You have been successfully signed up.",
@@ -107,7 +120,7 @@ export function SignupForm() {
             <CardContent className="space-y-4">
                 <FormField
                     control={form.control}
-                    name="fullname"
+                    name="fullName"
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Full Name</FormLabel>
